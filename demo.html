@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+	<title>Custom Menu Wizard : Interactive Demo</title>
+	<script type='text/javascript' src='//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js'></script>
+	<script type='text/javascript' src='custom-menu-wizard.js'></script>
+	<style type='text/css'>
+	html, body {width:100%; border:0 none; margin:0; padding:0;}
+	body {font-family:arial,sans-serif; font-size:14px; font-weight:normal; line-height:1.25; color:#333333; background-color:#ffffff;}
+	div, p, h3, ul, ol, li, form, input, select, label, a {position:relative;}
+	a {color:#333333; text-decoration:none;}
+	p {margin: 1em 0;}
+	input, select {font-family:inherit; font-size:inherit; font-weight:inherit; color:inherit;}
+	select {max-width:100%;}
+	label {vertical-align:middle;}
+	form {display:block; width:270px;}
+	h3 {border-bottom:1px solid #cccccc;margin:0 0 0.25em; padding: 0.5em 0 0.25em;}
+	button {background-color:#cccccc; border-color:#999999; border-radius:0.5em 0 0.5em 0; border-style:solid; border-width:1px 0 0 1px; bottom:-1em; cursor:pointer; font-size:inherit; margin:0; padding:0 0.2em; position:absolute; right:-1em;}
+	button:hover {background-color:#666666; color:#ffffff;}
+	optgroup option {padding-left:0.75em;}
+	#formheader {background-color:#666666; border-radius:0.4em 0.4em 0 0; color:#FFFFFF; margin:0 -1em -0.5em; padding:0.25em 1em; text-align:center;}
+	#theform {margin:1em; padding:0 1em; border:1px solid #999999; border-radius:0.5em;}
+	#theoutput {margin:1em;}
+	#theoutput div {margin:0.5em 0; padding:0 1em; border:1px solid #cccccc; border-radius:0.5em; min-height:2em; min-width:8em;}
+	#theoutput ul, #theoutput ol {margin:0.5em 0 0.5em 1.5em; padding:0;}
+	#theoutput li ul {margin:0 0 0 1em;}
+	#theoutput li ol {margin:0 0 0 1.5em;}
+	#theoutput ul {list-style-type:disc;}
+	#theoutput ul ul {list-style-type:circle;}
+	#theoutput ul ul ul {list-style-type:square;}
+	#theoutput ul ul ul ul {list-style-type:disc;}
+	#theoutput ul ul ul ul ul {list-style-type:circle;}
+	#theoutput ol {list-style-type:decimal;}
+	#theoutput ol ol {list-style-type:upper-alpha;}
+	#theoutput ol ol ol {list-style-type:lower-alpha;}
+	#theoutput ol ol ol ol {list-style-type:lower-roman;}
+	#theoutput ol ol ol ol ol {list-style-type:decimal;}
+	#themenu {margin:1em;}
+	#themenu ul {font-size:12px; list-style-type:none; margin:1em 0; padding:0;}
+	#themenu ul ul {margin:0 0 0 5em;}
+	#themenu li {display:block; margin:0; padding:0;}
+	#themenu a {display:inline-block; text-align:center; padding:0.3333em; margin:0.1667em; border-radius:0.3333em;}
+	#themenu span {display:block; width:6em; height:1.75em; line-height:1.75; border:1px solid #999999; border-radius:0.25em; box-shadow:2px 2px 2px 0px #666666;}
+	#thefooter {float:left; clear:left; margin:0 1em; color:#808080;}
+	#thefooter div {font-size:12px;}
+	.alignleft {float:left;}
+	.alignright {float:right;}
+	.current-ancestor {border-color:#cccc00 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 255, 153, 1)), to(rgba(255, 255, 153, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-moz--linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffff99, endColorstr=#1affff99); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffff99, endColorstr=#1affff99)";}
+	.current-item {border-color:#cc0000 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 204, 204, 1)), to(rgba(255, 204, 204, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-moz--linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcccc, endColorstr=#1affcccc); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcccc, endColorstr=#1affcccc)";}
+	.current-parent {border-color:#ff9900 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 204, 153, 1)), to(rgba(255, 204, 153, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-moz--linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcc99, endColorstr=#1affcc99); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcc99, endColorstr=#1affcc99)";}
+	.grey {color:#999999;}
+	.picked > a {background-color:#000066; color:#ffffff; font-weight:bold;}
+	.tryit {margin-left:1em; text-shadow:1px 1px 1px #ff0000;}
+	.widefat {width:100%;}
+	</style>
+</head>
+<body>
+	<div>
+		<div id='theform' class='alignright'>
+			<form>
+				<div id="formheader">
+					<strong>Custom Menu Wizard</strong> Interactive Demo
+					<br /><small>v1.1.0 <em>(subset of admin options)</em></small><strong class="tryit"><em>Try it out&hellip;</em></strong>
+				</div>
+
+				<p>
+					<label for="widget-custom-menu-wizard-2-title">Title:</label>
+					<label class="alignright">
+						<input type="checkbox" value="1" name="hide_title" id="widget-custom-menu-wizard-2-hide_title">
+						Hide</label>
+					<input type="text" value="" name="title" class="widefat" id="widget-custom-menu-wizard-2-title">
+					<small><em>Title can be set, but need not be displayed</em></small>
+				</p>
+
+				<p>
+					<label>
+						<input type="radio" checked="checked" value="0" name="filter" class="widget-custom-menu-wizard-listen" id="widget-custom-menu-wizard-2-filter_0">
+						Show all</label>
+					<br /><label>
+						<input type="radio" value="1" name="filter" class="widget-custom-menu-wizard-listen" id="widget-custom-menu-wizard-2-filter_1">
+						Children of:</label>
+					<select name="filter_item" style="max-width:100%;" class="widget-custom-menu-wizard-listen" id="widget-custom-menu-wizard-2-filter_item">
+							<option selected="selected" value="0">Current Item</option>
+							<option value="-2">Current Root Item</option>
+							<option value="-1">Current Parent Item</option>
+							<optgroup label="the-menu" data-cmw-active-menu='true'></optgroup>
+						</select>
+				</p>
+
+				<p class="widget-custom-menu-wizard-enableif">
+					<label>
+						<input type="checkbox" value="1" name="fallback_no_ancestor" id="widget-custom-menu-wizard-2-fallback_no_ancestor">
+						Fallback to Current Item, and</label>
+					<br /><label style="padding-left:1em;">
+						<input type="checkbox" value="1" name="fallback_include_parent" id="widget-custom-menu-wizard-2-fallback_include_parent">
+						Include Parent... </label>
+					<label>
+						<input type="checkbox" value="1" name="fallback_include_parent_siblings" id="widget-custom-menu-wizard-2-fallback_include_parent_siblings">
+						&amp; its Siblings</label>
+					<br /><small><em>If Current Root/Parent and no ancestor exists</em></small>
+				</p>
+
+				<p>
+					<label for="widget-custom-menu-wizard-2-start_level">Starting Level:</label>
+					<select name="start_level" id="widget-custom-menu-wizard-2-start_level">
+					</select>
+					<br /><small><em>Level to start testing items for inclusion</em></small>
+				</p>
+
+				<p>
+					<label for="widget-custom-menu-wizard-2-depth">For Depth:</label>
+					<select name="depth" id="widget-custom-menu-wizard-2-depth">
+						<option selected="selected" value="0">unlimited</option>
+					</select>
+					<br /><small><em>Relative to the first Filtered item found</em></small>
+				</p>
+
+				<p>
+					<label>
+						<input type="radio" checked="checked" value="0" name="flat_output" id="widget-custom-menu-wizard-2-flat_output_0">
+						Hierarchical</label>
+					&nbsp;<label>
+						<input type="radio" value="1" name="flat_output" id="widget-custom-menu-wizard-2-flat_output_1">
+						Flat</label>
+				</p>
+
+				<p class="widget-custom-menu-wizard-disableif">
+					<label>
+						<input type="checkbox" value="1" name="include_parent" id="widget-custom-menu-wizard-2-include_parent">
+						Include Parent... </label>
+					<label>
+						<input type="checkbox" value="1" name="include_parent_siblings" id="widget-custom-menu-wizard-2-include_parent_siblings">
+						&amp; its Siblings</label>
+					<br /><label>
+						<input type="checkbox" value="1" name="include_ancestors" id="widget-custom-menu-wizard-2-include_ancestors">
+						Include Ancestors</label>
+					<br /><label>
+						<input type="checkbox" value="1" name="title_from_parent" id="widget-custom-menu-wizard-2-title_from_parent">
+						Title from Parent Item</label>
+					<br /><small><em>Only if the "Children of:" Filter returns items</em></small>
+				</p>
+
+				<p>
+					Change UL to OL:
+					<br /><label>
+						<input type="checkbox" value="1" name="ol_root" id="widget-custom-menu-wizard-2-ol_root">
+						Top Level</label>
+					&nbsp;<label>
+						<input type="checkbox" value="1" name="ol_sub" id="widget-custom-menu-wizard-2-ol_sub">
+						Sub-Levels</label>
+				</p>
+
+				<p class="grey">
+					<small><em>Note that since WP v3.6 does it automatically,
+						<br />&quot;Hide Widget if Empty&quot; is ON for this demo.</em></small>
+				</p>
+
+				<button title="Reset the form to its defaults...">reset</button>
+			</form>
+		</div>
+
+		<div id='theoutput' class='alignright'>
+			<strong>Basic Output</strong> &hellip;
+			<div id='widget-output'></div>
+		</div>
+
+		<div id='themenu' class='alignleft'>
+			<div>
+				<strong>&quot;Selected&quot; Menu</strong> <small class='grey'>(example)</small>
+				<small><em>Click an item to toggle &quot;Current Item&quot;</em></small>
+			</div>
+			<ul>
+				<li>
+					<a href='#'><span>alpha</span></a>
+					<ul>
+						<li>
+							<a href='#'><span>bravo</span></a>
+						</li>
+						<li>
+							<a href='#'><span>charlie</span></a>
+							<ul>
+								<li>
+									<a href='#'><span>delta</span></a>
+									<ul>
+										<li>
+											<a href='#'><span>echo</span></a>
+											<ul>
+												<li>
+													<a href='#'><span>foxtrot</span></a>
+												</li>
+												<li>
+													<a href='#'><span>golf</span></a>
+												</li>
+											</ul>
+										</li>
+									</ul>
+								</li>
+								<li>
+									<a href='#'><span>hotel</span></a>
+									<ul>
+										<li>
+											<a href='#'><span>india</span></a>
+											<ul>
+												<li>
+													<a href='#'><span>juliet</span></a>
+												</li>
+											</ul>
+										</li>
+									</ul>
+								</li>
+							</ul>
+						</li>
+						<li>
+							<a href='#'><span>kilo</span></a>
+						</li>
+					</ul>
+				</li>
+				<li>
+					<a href='#'><span>lima</span></a>
+					<ul>
+						<li>
+							<a href='#'><span>mike</span></a>
+							<ul>
+								<li>
+									<a href='#'><span>november</span></a>
+								</li>
+							</ul>
+						</li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+		
+		<div id='thefooter'>
+			<div>
+				Please note that this page is a simulator : it uses javascript to reproduce what the widget
+				would do, without interacting with WordPress in any way.
+			</div>
+		</div>
+
+	</div>
+<script type='text/javascript'>
+jQuery(function($){
+	var maxlevel = 0,
+			switches = {hide_title:1, filter:1, fallback_no_ancestor:1, fallback_include_parent:1, fallback_include_parent_siblings:1, flat_output:1, include_parent:1, include_parent_siblings:1, include_ancestors:1, title_from_parent:1, ol_root:1, ol_sub:1},
+			integers = {filter_item:1, start_level:1, depth:1},
+			getSettings = function(){
+				var settings = {};
+				$.each($('form').serializeArray(), function(i, v){
+					settings[v.name] = switches[v.name] ? v.value === '1' : (integers[v.name] ? parseInt(v.value, 10) : v.value);
+				});
+				return settings;
+			},
+			hyphenIndent = function(s, n){
+				while(--n){
+					s = '- ' + s;
+				}
+				return s;
+			},
+			show = function(e, settings){
+				//hide_empty is assumed to be on (WP < v3.6) or will automatically on (WP v3.6+)
+				var output = $('#widget-output').empty(),
+						items = $('.picked'),
+						html = '',
+						currLevel = 0,
+						startLevel, title;
+				settings = settings || getSettings();
+				if(items.length){
+					title = settings.hide_title ? '' : settings.title;
+					if(settings.filter && settings.title_from_parent){
+						title = $('.picked-parent').children('a').text() || '';
+					}
+					items.each(function(){
+						var level = settings.flat_output ? 1 : parseInt(this.className.match(/level-(\d+)/)[1], 10);
+						if(currLevel){
+							if(level === currLevel){
+								html += '</li>';
+							}else if(level > currLevel){
+								html += settings.ol_sub ? '<ol>' : '<ul>';
+							}else{
+								while(currLevel-- > level){
+									html += '</li>' + (settings.ol_sub ? '</ol>' : '</ul>');
+								}
+							}
+						}else{
+							startLevel = level;
+						}
+						html += '<li><a href="#">' + $(this).children('a').text() + '</a>';
+						currLevel = level;
+					});
+					while(currLevel-- > startLevel){
+						html += '</li>' + (settings.ol_sub ? '</ol>' : '</ul>');
+					}
+					html += '</li>';
+					output.html( (settings.ol_root ? '<ol>' : '<ul>') + html + (settings.ol_root ? '</ol>' : '</ul>') );
+					if(title){
+						output.prepend('<h3>' + title + '</h3>');
+					}
+				}
+			},
+			walk = function(e){
+				var settings = getSettings(),
+						includeParent = settings.include_parent,
+						includeParentSiblings = settings.include_parent_siblings,
+						items = $('#themenu li').removeClass('picked-parent'),
+						picked = items.filter('.picked'),
+						cls = [],
+						firstParent = true,
+						parent, i;
+				if(!settings.filter){
+					//show all...
+					for(i = 1; i < settings.start_level; i++){
+						items = items.not('.level-' + i);
+					}
+					if(settings.depth){
+						for(i = i + settings.depth; i < maxlevel + 1; i++){
+							items = items.not('.level-' + i);
+						}
+					}
+				}else{
+					//parent item...
+					if(settings.filter_item > 0){
+						parent = items.eq(settings.filter_item - 1);
+					}else if(!settings.filter_item){
+						parent = $('.current-item').closest('li');
+					}else{
+						if(settings.filter_item < -1){
+							//this could be more than one!...
+							parent = $('.current-ancestor').closest('li');
+						}else{
+							parent = $('.current-parent').closest('li');
+						}
+						if(!parent.length && settings.fallback_no_ancestor){
+							parent = $('.current-item').closest('li');
+							includeParent = includeParent || settings.fallback_include_parent;
+							includeParentSiblings = includeParentSiblings || settings.fallback_include_parent_siblings;
+						}
+					}
+					//could be multiple - only want first one that matches start_level...
+					parent = parent.filter(function(){
+							var level = parseInt(this.className.match(/level-(\d+)/)[1], 10),
+									rtn = firstParent && level > settings.start_level - 2,
+									i, j;
+							for(i = level + 1, j = 0; rtn && i <= maxlevel && (!settings.depth || j < settings.depth); i++, j++){
+								cls.push('.level-' + i);
+							}
+							if(rtn){
+								firstParent = false;
+							}
+							return rtn;
+						});
+					//kids...
+					items = parent.find('li').filter( cls.join(',') );
+					if(items.length){
+						if(includeParentSiblings){
+							items = items.add( parent.siblings('li') ).add( parent );
+							includeParent = false;
+						}
+						if(settings.include_ancestors){
+							items = items.add( parent.parentsUntil('#themenu', 'li') ).add( parent );
+							includeParent = false;
+						}
+						if(includeParent){
+							items = items.add( parent );
+						}
+						parent.addClass('picked-parent');
+					}
+				}
+				picked.not(items).removeClass('picked');
+				items.not('.picked').addClass('picked');
+				show.call(this, e, settings);
+			},
+			flds = $('input,select');
+	$('#widget-output').on('click', 'a', false);
+	$('#themenu a').on('click', function(){
+		//click on a #themenu item to [un]make it the current item...
+		var cls = ['current-item', 'current-parent', 'current-ancestor'],
+				inPath = $(this).find('span').not('.' + cls[0]).parentsUntil('#themenu', 'li'),
+				i, n;
+		$('.' + cls.join(',.')).removeClass().removeAttr('title');
+		for(i = 0; i < inPath.length; i++){
+			n = i === 1 ? cls.join(' ') : cls[0];
+			inPath.eq(i).children('a').find('span').addClass(n).attr({title:n.replace(' ', ' & ').replace(/-/g, ' ')});
+			if(cls.length > 1){
+				cls.shift();
+			}
+		}
+		flds.eq(0).trigger('change');
+		return false;
+	}).map(function(i){
+		//create filter_item's optgroup options...
+		var el = $(this),
+				level = el.parentsUntil('#themenu', 'li').length;
+		maxlevel = Math.max(maxlevel, level);
+		el.parent().addClass('level-' + level);
+		return $('<option/>', {value:i + 1}).text( hyphenIndent(el.text(), level) ).get(0);
+	}).appendTo('optgroup');
+	//populate starting-level and depth options...
+	for(i = 1; i < maxlevel + 1; i++){
+		var levels = i < 2 ? ' level' : ' levels',
+				att = {value:i};
+		$('<option/>', att).text(i + levels).appendTo('#widget-custom-menu-wizard-2-depth');
+		if(i < 2){
+			att.selected = 'selected';
+		}
+		$('<option/>', att).text(i).appendTo('#widget-custom-menu-wizard-2-start_level');
+	}
+	$('button').on('click', function(){
+		$(this).parent().get(0).reset();
+		$('#widget-custom-menu-wizard-2-filter_item').trigger('change');
+		return false;
+	});
+	flds.not( flds.filter('[type="text"]').on('blur', show) )
+		.on('change', walk).eq(0).trigger('change');
+});
+</script>
+</body>
+</html>
