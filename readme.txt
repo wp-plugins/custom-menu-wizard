@@ -3,7 +3,7 @@ Contributors: wizzud
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,menu level,menu branch
 Requires at least: 3.0.1
 Tested up to: 3.6
-Stable tag: 1.0.0
+Stable tag: 1.2.0
 License: GPLv2 or Later
 
 Custom Menu Wizard Widget : Show branches or levels of your menu in a widget, with full customisation.
@@ -11,7 +11,7 @@ Custom Menu Wizard Widget : Show branches or levels of your menu in a widget, wi
 == Description ==
 
 This plugin is a boosted version of the WordPress "Custom Menu" widget. 
-It provides full control over most of the parameters available when calling WP's [wp_nav_menu()](http://codex.wordpress.org/Function_Reference/wp_nav_menu) function, as well as providing pre-filtering of the menu items in order to be able to select a specific portion of the custom menu. It also automatically adds a couple of custom classes.
+It provides full control over most of the parameters available when calling WP's [wp_nav_menu()](http://codex.wordpress.org/Function_Reference/wp_nav_menu) function, as well as providing pre-filtering of the menu items in order to be able to select a specific portion of the custom menu. It also automatically adds a couple of custom classes. And there is now (v1.2.0) a shortcode that enables you to include the widget's output in your content.
 
 Features include:
 
@@ -26,7 +26,8 @@ Features include:
 * Add/specify custom class(es) for the widget block, the menu container, and the menu itself
 * Modify the link's output with additional HTML around the link's text and/or the link element itself
 * Use Ordered Lists (OL) for the top and/or sub levels instead of Unordered Lists (UL)
-* As of v1.1.0 : Select a branch based on the ultimate ancestor (root level) of the "current" item
+* *As of v1.1.0* : Select a branch based on the ultimate ancestor (root level) of the "current" item
+* *As of v1.2.0* : Shortcode, [custom_menu_wizard], available to run the widget from within content
 
 **Widget Options**
 
@@ -61,36 +62,17 @@ logical sections and made each section collapsible (with remembered state, open 
         The dropdown list will present a "Current Item" option (default), a "Current Root Item" (v1.1.0)
         and "Current Parent Item" (v1.1.0) option, followed by all the available items from the menu chosen in `Select Menu`.
         The widget will output the *children* of the selected item, always assuming that they lie within the bounds of any other parameters set.
-        
-        "Current Item" is the menu item that WordPress recognises as being currently on display;
-        "Current Parent Item" (v1.1.0) is the *immediate* ancestor (within `Select Menu`) of that same menu item;
-        and "Current Root Item" (v1.1.0) is the *ultimate* ancestor (within `Select Menu`) of that same menu item.
-        Obviously, if the menu item currently on display (as determined by WordPress) does not
+
+        * "Current Item" is the menu item that WordPress recognises as being currently on display (current menu item)
+
+        * "Current Parent Item" (v1.1.0) is the *immediate* ancestor (within `Select Menu`) of the current menu item
+
+        * "Current Root Item" (v1.1.0) is the *ultimate* ancestor (within `Select Menu`) of the current menu item.
+
+        Obviously, if the current menu item (as determined by WordPress) does not
         appear in the `Select Menu` then there is going to be no output for any of these options.
         
         If you change `Select Menu`, the options presented in this dropdown will change accordingly and the selected option will revert to the default.
-
-    * **Fallback to Current Item** *(checkbox)* as of v1.1.0
-
-        This option is only applicable when `Children of` is set to either "Current Root Item" or "Current Parent Item". If enabled,
-        it provides a fallback of effectively switching the filter to "Current Item" **if, and only if**, the current menu item 
-        (as determined by WordPress) is at Level 1
-        (top level) of the selected menu. For example, say you were to set `Children of` to "Current Parent Item", with `Starting Level`
-        at "1" and `For Depth` at "unlimited" : if the current menu item was found at level 1 (root level of the menu) then ordinarily
-        there would be no output because the current item has no parent! If you were to enable `Fallback to Current Item` then you
-        *would* have some output - the entire branch below the current item.
-
-    * **Include Parent...** *(checkbox)* as of v1.1.0
-
-        This option extends the `Fallback to Current Item` option (above). If the enabled fallback is actually used, this option can
-        temporarily override the equivalent **Output** option to ON. Note that if the **Output** options are already set to include
-        the parent item (with or without siblings), this option has absolutely no effect.
-
-    * **& its Siblings** *(checkbox)* as of v1.1.0
-
-        This option extends the `Fallback to Current Item` option (above). If the enabled fallback is actually used, this option can
-        temporarily override the equivalent **Output** option to ON. Note that if the equivalent **Output** option is already enabled,
-        this option has absolutely no effect.
 
     * **Starting Level** *(select, default: "1")*
 
@@ -107,6 +89,57 @@ logical sections and made each section collapsible (with remembered state, open 
         `For Depth` setting is applied relative to the level at which the first item to be kept is found. For example, say you were to set
         `Children of` to "Current Item", `Starting Level` to "2", and `For Depth` to "2 levels" : if the current item was found at level 3,
         then you would get the current item's immediate children (from level 4), plus *their* immediate children (from level 5).
+
+* **Fallbacks**
+
+    Fallback for `Children of` being set to either *Current Root Item* or *Current Parent Item*, and current item not having an ancestor:
+
+    * **Switch to Current Item** *(checkbox)* as of v1.1.0
+
+        If enabled,
+        it provides a fallback of effectively switching the filter to "Current Item" if the current menu item 
+        (as determined by WordPress) is at Level 1
+        (top level) of the selected menu. For example, say you were to set `Children of` to "Current Parent Item", with `Starting Level`
+        at "1" and `For Depth` at "unlimited" : if the current menu item was found at level 1 (root level of the menu) then ordinarily
+        there would be no output because the current item has no parent! If you were to enable the `Switch to Current Item` fallback then you
+        *would* have some output - the entire branch below the current item.
+
+        * **Include Parent...** *(checkbox)* as of v1.1.0
+
+            This option extends the `Switch to Current Item` option (above). If the enabled fallback is actually used, this option can
+            temporarily override the equivalent **Output** option to ON. Note that if the **Output** options are already set to include
+            the parent item (with or without siblings), this option has absolutely no effect.
+
+        * **& its Siblings** *(checkbox)* as of v1.1.0
+
+            This option extends the `Switch to Current Item` option (above). If the enabled fallback is actually used, this option can
+            temporarily override the equivalent **Output** option to ON. Note that if the equivalent **Output** option is already enabled,
+            this option has absolutely no effect.
+
+    Fallback for `Children of` being set to *Current Item*, and current item not having any children:
+
+    * **Switch to Current Parent Item** *(checkbox)* as of v1.2.0
+
+        If enabled, it provides a fallback of effectively switching the filter to "Current Parent Item" if looking for children
+        of Current Item and there aren't any. For example, say you were to set `Children of` to "Current Item", with `Starting Level`
+        at "1" and `For Depth` at "unlimited" : if the current menu item has no children then ordinarily
+        there would be no output! If you were to enable the `Switch to Current Item` fallback then you
+        *would* have some output - the current item and its siblings.
+        
+        Please note that there is one difference between this fallback and the normal "Current Parent Item" filter : if the current item
+        has no ancestor (as well as no children) then you will always get the current item and its siblings, regardless of any other settings!
+
+        * **Include Parent...** *(checkbox)* as of v1.2.0
+
+            This option extends the `Switch to Current Parent Item` option (above). If the enabled fallback is actually used, this option can
+            temporarily override the equivalent **Output** option to ON. Note that if the **Output** options are already set to include
+            the parent item (with or without siblings), this option has absolutely no effect.
+
+        * **& its Siblings** *(checkbox)* as of v1.2.0
+
+            This option extends the `Switch to Current Parent Item` option (above). If the enabled fallback is actually used, this option can
+            temporarily override the equivalent **Output** option to ON. Note that if the equivalent **Output** option is already enabled,
+            this option has absolutely no effect.
 
 * **Output**
 
@@ -132,10 +165,18 @@ logical sections and made each section collapsible (with remembered state, open 
         Same as `Include Parent` except that all ancestors, right back to root level, are included. Only applies to a successful
         `Children of` filter.
 
-    * **Title from Parent Item** *(checkbox)*
+    * **Title from Parent** *(checkbox)*
 
         Again, this only applies to a successful `Children of` filter. If checked, use the title of the parent item as the widget's
         title when displaying the output. This will override (ie. ignore) the `Hide` checkbox setting!
+
+    * **Title from "Current" Item** *(checkbox)*
+
+        If checked, use the title of the current menu item (as determined by WordPress) as the widget's
+        title when displaying the output. This will override (ie. ignore) the `Hide` checkbox setting!
+        
+        Note that the current menu item is not required to be within the resultant output, merely within the `Select Menu`.
+        Also, `Title from Parent` (if applicable, and if available) takes priority over this option.
 
     * **Change UL to OL**
 
@@ -177,7 +218,7 @@ logical sections and made each section collapsible (with remembered state, open 
 
 * **Classes**
 
-    * **Menu Class** *(default: "menu-widget")
+    * **Menu Class** *(default: "menu-widget")*
 
         This is the class that will be applied to the list element that holds the entire menu.
         
@@ -202,6 +243,127 @@ logical sections and made each section collapsible (with remembered state, open 
     * **After the Link Text**
 
         Text or HTML that will be placed immediately after each menu item's link text.
+
+**Shortcode**
+
+The shortcode is **`[custom_menu_wizard]`**. Most of the attributes reflect the options available to the widget, but some have been simplified for 
+easier use in the shortcode format.
+Please note that the `Hide Widget if Empty` option is not available to the shortcode : it is set to enabled, and if there are no menu items
+found then there will be no output from the shortcode.
+
+* **title** *(string)*
+
+    The output's `Title`, which may be overridden by `title_from`. Note that there is no shortcode equivalent of the widget's `Hide` option for the title.
+
+* **menu** *(string | integer)*
+
+    Accepts a menu name (most likely usage) or id. If not provided, the shortcode will attempt to find the first menu (ordered by name) 
+    that has menu items attached to it, and use that.
+
+* **children_of** *(string | integer)*
+
+    If empty, or not provided, this is the same as enabling `Show All` (see above) for the widget. Anything else is a `Children of` filter :
+  
+    * If numeric, it is taken as being the id of a menu item. The widget will look for the `Children of` that menu item (within `menu`).
+      (Hint : In Menus Admin, hover over the item's **Remove** link and note the number after *menu-item=* in the URL)
+  
+    * Certain specific strings have the following meanings:
+  
+        * *'current'* or *'current-item'* : a `Children of` "Current Item" filter
+
+        * *'parent'* or *'current-parent'* : a `Children of` "Current Parent Item" filter
+
+        * *'root'* or *'current-ancestor'* : a `Children of` "Current Root Item" filter
+
+    * If any other string, it is taken to be the title of a menu item. The widget will look for the `Children of` that menu item
+      (within `menu`). Please note that the code looks for a *caseless* title match, so specifying `children_of="my menu item"` will
+      match against a menu item with the title "My Menu Item".
+
+* **fallback_parent** *(string | integer)*
+
+    This is the fallback option for when `Children of` is set to either *Current Root Item* or *Current Parent Item*, and
+    the current item has no ancestors (see `Switch to Current Item` under **Fallbacks** above).
+
+    * Any "truthy" value (eg. 1, *'true'*, *'on'*, *'parent'*, *'siblings'*) : Enables widget's `Switch to Current Item` **Fallbacks** option
+    
+    * *'parent'* : Enables widget's `Include Parent...` **Fallbacks** extension option (in addition to the above)
+
+    * *'siblings'* : Enables widget's `& its Siblings` **Fallbacks** extension option (in addition to the above)
+
+* **fallback_current** *(string | integer)*
+
+    This is the fallback option for when `Children of` is set to *Current Item*, and
+    the current item has no children (see `Switch to Current Parent Item` under **Fallbacks** above).
+
+    * Any "truthy" value (eg. 1, *'true'*, *'on'*, *'parent'*, *'siblings'*) : Enables widget's `Switch to Current Parent Item` **Fallbacks** option
+    
+    * *'parent'* : Enables widget's `Include Parent...` **Fallbacks** extension option (in addition to the above)
+
+    * *'siblings'* : Enables widget's `& its Siblings` **Fallbacks** extension option (in addition to the above)
+
+* **start_level** *(integer, default 1)* See widget's `Starting Level` option, under **Filter** above.
+
+* **depth** *(integer, default 0)* See widget's `For Depth` option, under **Filter** above.
+    
+* **flat_output** *(switch, off by default, 1 to enable)* See widget's `Flat` option, under **Output** above.
+
+* **include** *(string)*
+
+    * *'parent'* : Enables widget's `Include Parent...` **Output** option
+
+    * *'siblings'* : Enables widget's `& its Siblings` **Output** option
+
+    * *'ancestors'* : Enables widget's `Include Ancestors` **Output** option
+    
+    Supply more than one by separating them with a comma, space or hyphen, eg. `include="siblings ancestors"`.
+
+* **title_from** *(string)*
+
+    * *'parent'* : Enables widget's `Title from Parent` **Output** option
+
+    * *'current'* : Enables widget's `Title from "Current" Item` **Output** option
+
+    Supply more than one by separating them with a comma, space or hyphen, eg. `title_from="parent,current"`.
+
+* **ol_root** *(switch, off by default, 1 to enable)* See widget's `Top Level` option, under **Output** above.
+
+* **ol_sub** *(switch, off by default, 1 to enable)* See widget's `Sub-Levels` option, under **Output** above.
+
+* **container** *(string)* See widget's `Element` option, under **Container** above.
+
+* **container_id** *(string)* See widget's `Unique ID` option, under **Container** above.
+
+* **container_class** *(string)* See widget's `Class` option, under **Container** above.
+
+* **menu_class** *(string)* See widget's `Menu Class` option, under **Classes** above.
+
+* **widget_class** *(string)* See widget's `Widget Class` option, under **Classes** above.
+
+* **wrap_link** *(string)*
+
+    This is an optional tag name (eg. *'div'*, *'p'*, *'span*') that, if provided, will be made into HTML start/end tags
+    and sent through to the widget as its `Before the Link` and `After the Link` options. Please note that the shortcode usage - a simple
+    tag name - is much more restrictive than the widget's options, which allow HTML.
+
+* **wrap_link_text** *(string)*
+
+    This is an optional tag name (eg. *'span*', *'em'*, '*strong*') that, if provided, will be made into HTML start/end tags
+    and sent through to the widget as its `Before the Link Text` and `After the Link Text` options. Please note that the shortcode usage - a
+    simple tag name - is much more restrictive than the widget's options, which allow HTML.
+
+**Shortcode Examples**
+
+* Show the entire "main" menu :
+
+    `[custom_menu_wizard menu=main]`
+
+* Show the children of the Current Item within the "main" menu, for unlimited depth, and include the Current Item's parent :
+
+    `[custom_menu_wizard menu=main children_of=current include_parent=1]`
+
+* From the "animals" menu, show all the items *immediately* below (depth=1) "Small Dogs", plus "Small Dogs" and its sibling items, as ordered lists :
+
+    `[custom_menu_wizard menu="animals" children_of="small dogs" depth=1 include_parent_siblings=1 ol_root=1 ol_sub=1]`
 
 == Installation ==
 
@@ -230,6 +392,18 @@ If you have a question or problem, please use the integrated Support forum.
 
 == Changelog ==
 
+= 1.2.0 =
+
+* added custom_menu_wizard shortcode, to run the widget from within content
+
+* moved the 'no ancestor' fallback into new Fallback collapsible section, and added a fallback for Current Item with no children
+
+* fixed a bug with optgroups/options made available for the 'Children of' selector after the widget has been saved (also affected disabled fields and styling)
+
+* don't include menus with no items
+
+* updated demo.html
+
 = 1.1.0 =
 
 * added 'Current Root Item' and 'Current Parent Item' to the `Children of` filter
@@ -255,6 +429,12 @@ If you have a question or problem, please use the integrated Support forum.
 Initial release
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+
+Added custom_menu_wizard shortcode, to run the widget from within content. Also added a new fallback for Current Item having no children, and
+moved all fallbacks into a collapsible Fallbacks section. Fixed a bug with optgroups/options made available for the 'Children of' selector 
+after the widget has been saved (also affected disabled fields and styling).
 
 = 1.1.0 =
 
