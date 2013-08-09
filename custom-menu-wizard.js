@@ -1,12 +1,11 @@
 /* Plugin Name: Custom Menu Wizard
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Roger Barrett
  * 
  * Script for controlling this widget's options (in Admin -> Widgets)
 */
 jQuery(function($){
-	var dotPrefix = '.widget-custom-menu-wizard',
-			filterItems = $('select' + dotPrefix + '-listen');
+	var dotPrefix = '.widget-custom-menu-wizard';
 	$(document)
 		//fieldsets...
 		.on('click', dotPrefix + '-collapsible-fieldset', function(){
@@ -20,33 +19,60 @@ jQuery(function($){
 			this.blur();
 			return false;
 		})
-		//change of menu...
-		.on('change', dotPrefix + '-selectmenu', function(){
-			var select = $('select' + dotPrefix + '-listen', this.form),
-					from = $('#' + select.attr('id') + '_ignore').find('optgroup'),
-					groupClone;
-			if(from.length > this.selectedIndex){
-				if(select.val() > 0){
-					select.val(0);
-				}
-				groupClone = from.eq( this.selectedIndex ).clone();
-				groupClone.find('option[selected]').removeAttr('selected').prop('selected', false);
-				select.find('optgroup').remove();
-				select.append(groupClone).trigger('change');
-			}
-		})
-		//enableif and disableif...
+		//change of menu, and enableif / disableif...
 		.on('change', dotPrefix + '-listen', function(){
 			var listeners = $(dotPrefix + '-listen', this.form),
-					showAll = listeners.eq(0).prop('checked'),
-					rootParent = !showAll && listeners.filter('select').val() < 0;
-			$(dotPrefix + '-disableif', this.form).css({color:showAll ? '#999999' : 'inherit'}).find('input,select').prop('disabled', showAll);
-			$(dotPrefix + '-enableif', this.form).css({color:!rootParent ? '#999999' : 'inherit'}).find('input,select').prop('disabled', !rootParent);
+					selectMenu = listeners.filter(dotPrefix + '-selectmenu'),
+					others = listeners.not(selectMenu),
+					showAll = others.eq(0).prop('checked'),
+					filterItem = others.filter('select').eq(0),
+					fiVal = parseInt(filterItem.val(), 10),
+					groupClone;
+			if(selectMenu.is(this)){
+				selectMenu = this.selectedIndex;
+				if(!filterItem.find('optgroup').filter(function(){
+							var keep = $(this).data('cmwOptgroupIndex') === selectMenu;
+							if(!keep){
+								$(this).remove();
+							}
+							return keep;
+						}).length){
+					groupClone = $('#' + filterItem.attr('id') + '_ignore').find('optgroup').eq(selectMenu).clone();
+					if(groupClone.length){
+						if(fiVal > 0){
+							fiVal = 0;
+							filterItem.val(fiVal);
+						}
+						groupClone.find('option[selected]').removeAttr('selected').prop('selected', false);
+						filterItem.append(groupClone);
+					}
+				}
+			}
+			$.each(
+				{	'' : showAll,
+					'not-rp' : showAll || fiVal >= 0,
+					'not-ci' : showAll || !!fiVal
+				},
+				function(k, v){
+					$(dotPrefix + '-disableif' + k, this.form).css({color:v ? '#999999' : 'inherit'}).find('input,select').prop('disabled', v);
+				});
 		});
-	//remove non-active optgroups...
-	filterItems.find('optgroup').filter(function(){
-		return !$(this).data('cmwActiveMenu');
-	}).remove();
-	//trigger change...
-	filterItems.trigger('change');
+
+	//when a widget is opened or saved, trigger change on the filter_item select...
+	//to do this I've elected to modify WP's window.wpWidgets object and intercept its fixLabels()
+	//method, which, handily, gets called whenever a widget is opened or saved!
+	if(window.wpWidgets && window.wpWidgets.fixLabels && !window.wpWidgets._cmw_fixLabels){
+		//save the original...
+		window.wpWidgets._cmw_fixLabels = window.wpWidgets.fixLabels;
+		//replace the original...
+		window.wpWidgets.fixLabels = function(widget){
+			//trigger change on selectmenu...
+			widget.find('.widget-custom-menu-wizard-selectmenu').trigger('change');
+			//run the original...
+			window.wpWidgets._cmw_fixLabels(widget);
+    };
+	}else{
+		//one-off fallback...
+		$(dotPrefix + '-selectmenu').trigger('change');
+	}
 });

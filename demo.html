@@ -21,20 +21,21 @@
 	#formheader {background-color:#666666; border-radius:0.4em 0.4em 0 0; color:#FFFFFF; margin:0 -1em -0.5em; padding:0.25em 1em; text-align:center;}
 	#theform {margin:1em; padding:0 1em; border:1px solid #999999; border-radius:0.5em;}
 	#theoutput {margin:1em;}
-	#theoutput div {margin:0.5em 0; padding:0 1em; border:1px solid #cccccc; border-radius:0.5em; min-height:2em; min-width:8em;}
-	#theoutput ul, #theoutput ol {margin:0.5em 0 0.5em 1.5em; padding:0;}
-	#theoutput li ul {margin:0 0 0 1em;}
-	#theoutput li ol {margin:0 0 0 1.5em;}
-	#theoutput ul {list-style-type:disc;}
-	#theoutput ul ul {list-style-type:circle;}
-	#theoutput ul ul ul {list-style-type:square;}
-	#theoutput ul ul ul ul {list-style-type:disc;}
-	#theoutput ul ul ul ul ul {list-style-type:circle;}
-	#theoutput ol {list-style-type:decimal;}
-	#theoutput ol ol {list-style-type:upper-alpha;}
-	#theoutput ol ol ol {list-style-type:lower-alpha;}
-	#theoutput ol ol ol ol {list-style-type:lower-roman;}
-	#theoutput ol ol ol ol ol {list-style-type:decimal;}
+	#widget-output {margin:0.5em 0; padding:0 1em; border:1px solid #cccccc; border-radius:0.5em; min-height:2em; min-width:9em;}
+	#widget-output ul, #widget-output ol {margin:0.5em 0 0.5em 1.5em; padding:0;}
+	#widget-output li ul {margin:0 0 0 1em;}
+	#widget-output li ol {margin:0 0 0 1.5em;}
+	#widget-output ul {list-style-type:disc;}
+	#widget-output ul ul {list-style-type:circle;}
+	#widget-output ul ul ul {list-style-type:square;}
+	#widget-output ul ul ul ul {list-style-type:disc;}
+	#widget-output ul ul ul ul ul {list-style-type:circle;}
+	#widget-output ol {list-style-type:decimal;}
+	#widget-output ol ol {list-style-type:upper-alpha;}
+	#widget-output ol ol ol {list-style-type:lower-alpha;}
+	#widget-output ol ol ol ol {list-style-type:lower-roman;}
+	#widget-output ol ol ol ol ol {list-style-type:decimal;}
+	#fallback {display:none; text-align:right; color:#006600;}
 	#themenu {margin:1em;}
 	#themenu ul {font-size:12px; list-style-type:none; margin:1em 0; padding:0;}
 	#themenu ul ul {margin:0 0 0 5em;}
@@ -45,9 +46,14 @@
 	#thefooter div {font-size:12px;}
 	.alignleft {float:left;}
 	.alignright {float:right;}
-	.current-ancestor {border-color:#cccc00 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 255, 153, 1)), to(rgba(255, 255, 153, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-moz--linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffff99, endColorstr=#1affff99); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffff99, endColorstr=#1affff99)";}
-	.current-item {border-color:#cc0000 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 204, 204, 1)), to(rgba(255, 204, 204, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-moz--linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcccc, endColorstr=#1affcccc); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcccc, endColorstr=#1affcccc)";}
-	.current-parent {border-color:#ff9900 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 204, 153, 1)), to(rgba(255, 204, 153, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-moz--linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcc99, endColorstr=#1affcc99); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcc99, endColorstr=#1affcc99)";}
+	.collapsible {background-color:#ffffff; background-image:-webkit-gradient(linear, left top, left bottom, from(#ffffff), to(#e0e0e0)); background-image:-webkit-linear-gradient(top, #FFFFFF, #E0E0E0); background-image:-moz-linear-gradient(top, #FFFFFF, #E0E0E0); background-image:-ms-linear-gradient(top, #FFFFFF, #E0E0E0); background-image:-o-linear-gradient(top, #FFFFFF, #E0E0E0); background-image:linear-gradient(to bottom, #FFFFFF, #E0E0E0);  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffff, endColorstr=#e0e0e0); -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffff, endColorstr=#e0e0e0)";border:1px solid #CCCCCC; border-radius:0.3333em; cursor:pointer; font-size:12px; line-height:1.75; padding:0 0.5em;}
+	.collapsible span {display:none; position:relative; float:right; color:#999999;}
+	.collapsible:hover span {color:#333333;}
+	.collapsible span:first-child, .collapsible.closed span:last-child {display:inline;}
+	.collapsible.closed span:first-child {display:none;}
+	.current-ancestor {border-color:#cccc00 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 255, 153, 1)), to(rgba(255, 255, 153, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-moz-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 255, 153, 1), rgba(255, 255, 153, 0.1)); filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffff99, endColorstr=#1affff99); -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffff99, endColorstr=#1affff99)";}
+	.current-item {border-color:#cc0000 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 204, 204, 1)), to(rgba(255, 204, 204, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-moz-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 204, 204, 1), rgba(255, 204, 204, 0.1)); filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcccc, endColorstr=#1affcccc); -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcccc, endColorstr=#1affcccc)";}
+	.current-parent {border-color:#ff9900 !important; background-image:-webkit-gradient(linear, left top, left bottom, from(rgba(255, 204, 153, 1)), to(rgba(255, 204, 153, 0.1))); background-image:-webkit-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-moz-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-ms-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:-o-linear-gradient(top, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); background-image:linear-gradient(to bottom, rgba(255, 204, 153, 1), rgba(255, 204, 153, 0.1)); filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcc99, endColorstr=#1affcc99); -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#ffffcc99, endColorstr=#1affcc99)";}
 	.grey {color:#999999;}
 	.picked > a {background-color:#000066; color:#ffffff; font-weight:bold;}
 	.tryit {margin-left:1em; text-shadow:1px 1px 1px #ff0000;}
@@ -60,7 +66,7 @@
 			<form>
 				<div id="formheader">
 					<strong>Custom Menu Wizard</strong> Interactive Demo
-					<br /><small>v1.1.0 <em>(subset of admin options)</em></small><strong class="tryit"><em>Try it out&hellip;</em></strong>
+					<br /><small>v1.2.0 <em>(subset of admin options)</em></small><strong class="tryit"><em>Try it out&hellip;</em></strong>
 				</div>
 
 				<p>
@@ -71,6 +77,8 @@
 					<input type="text" value="" name="title" class="widefat" id="widget-custom-menu-wizard-2-title">
 					<small><em>Title can be set, but need not be displayed</em></small>
 				</p>
+
+				<p class='collapsible'>Filter<span>&#9650;</span><span>&#9660;</span></p>
 
 				<p>
 					<label>
@@ -83,21 +91,8 @@
 							<option selected="selected" value="0">Current Item</option>
 							<option value="-2">Current Root Item</option>
 							<option value="-1">Current Parent Item</option>
-							<optgroup label="the-menu" data-cmw-active-menu='true'></optgroup>
+							<optgroup label="the-menu"></optgroup>
 						</select>
-				</p>
-
-				<p class="widget-custom-menu-wizard-enableif">
-					<label>
-						<input type="checkbox" value="1" name="fallback_no_ancestor" id="widget-custom-menu-wizard-2-fallback_no_ancestor">
-						Fallback to Current Item, and</label>
-					<br /><label style="padding-left:1em;">
-						<input type="checkbox" value="1" name="fallback_include_parent" id="widget-custom-menu-wizard-2-fallback_include_parent">
-						Include Parent... </label>
-					<label>
-						<input type="checkbox" value="1" name="fallback_include_parent_siblings" id="widget-custom-menu-wizard-2-fallback_include_parent_siblings">
-						&amp; its Siblings</label>
-					<br /><small><em>If Current Root/Parent and no ancestor exists</em></small>
 				</p>
 
 				<p>
@@ -114,6 +109,37 @@
 					</select>
 					<br /><small><em>Relative to the first Filtered item found</em></small>
 				</p>
+
+				<p class='collapsible end-collapsible'>Fallbacks<span>&#9650;</span><span>&#9660;</span></p>
+
+				<p class="widget-custom-menu-wizard-disableifnot-rp">
+					<small><strong>If &quot;Children of&quot; is <em>Current Root / Parent Item</em>, and no ancestor exists :</strong></small>
+					<br /><label>
+						<input type="checkbox" value="1" name="fallback_no_ancestor" id="widget-custom-menu-wizard-2-fallback_no_ancestor">
+						Switch to Current Item, and</label>
+					<br /><label style="padding-left:1em;">
+						<input type="checkbox" value="1" name="fallback_include_parent" id="widget-custom-menu-wizard-2-fallback_include_parent">
+						Include Parent... </label>
+					<label>
+						<input type="checkbox" value="1" name="fallback_include_parent_siblings" id="widget-custom-menu-wizard-2-fallback_include_parent_siblings">
+						&amp; its Siblings</label>
+					<br /><small><em>If Current Root/Parent and no ancestor exists</em></small>
+				</p>
+
+				<p class="widget-custom-menu-wizard-disableifnot-ci">
+					<small><strong>If &quot;Children of&quot; is <em>Current Item</em>, and current item has no children :</strong></small>
+					<br /><label>
+						<input type="checkbox" value="1" name="fallback_no_children" id="widget-custom-menu-wizard-2-fallback_no_children">
+						Switch to Current Parent Item, and</label>
+					<br /><label style="padding-left:1em;">
+						<input type="checkbox" value="1" name="fallback_nc_include_parent" id="widget-custom-menu-wizard-2-fallback_nc_include_parent">
+						Include Parent... </label>
+					<label>
+						<input type="checkbox" value="1" name="fallback_nc_include_parent_siblings" id="widget-custom-menu-wizard-2-fallback_nc_include_parent_siblings">
+						&amp; its Siblings</label>
+				</p>
+
+				<p class='collapsible end-collapsible'>Output<span>&#9650;</span><span>&#9660;</span></p>
 
 				<p>
 					<label>
@@ -136,8 +162,15 @@
 						Include Ancestors</label>
 					<br /><label>
 						<input type="checkbox" value="1" name="title_from_parent" id="widget-custom-menu-wizard-2-title_from_parent">
-						Title from Parent Item</label>
-					<br /><small><em>Only if the "Children of:" Filter returns items</em></small>
+						Title from Parent</label>
+					<br /><small><em>Only if the "Children of" Filter returns items</em></small>
+				</p>
+
+				<p>
+					<label>
+						<input type="checkbox" value="1" name="title_from_current" id="widget-custom-menu-wizard-2-title_from_current">
+						Title from &quot;Current&quot; Item</label>
+					<br /><small><em>Lower priority than "Title from Parent"</em></small>
 				</p>
 
 				<p>
@@ -150,7 +183,7 @@
 						Sub-Levels</label>
 				</p>
 
-				<p class="grey">
+				<p class="grey end-collapsible">
 					<small><em>Note that since WP v3.6 does it automatically,
 						<br />&quot;Hide Widget if Empty&quot; is ON for this demo.</em></small>
 				</p>
@@ -162,6 +195,7 @@
 		<div id='theoutput' class='alignright'>
 			<strong>Basic Output</strong> &hellip;
 			<div id='widget-output'></div>
+			<div id='fallback'><small>Fallback invoked</small></div>
 		</div>
 
 		<div id='themenu' class='alignleft'>
@@ -228,6 +262,9 @@
 						</li>
 					</ul>
 				</li>
+				<li>
+					<a href='#'><span>oscar</span></a>
+				</li>
 			</ul>
 		</div>
 		
@@ -242,7 +279,7 @@
 <script type='text/javascript'>
 jQuery(function($){
 	var maxlevel = 0,
-			switches = {hide_title:1, filter:1, fallback_no_ancestor:1, fallback_include_parent:1, fallback_include_parent_siblings:1, flat_output:1, include_parent:1, include_parent_siblings:1, include_ancestors:1, title_from_parent:1, ol_root:1, ol_sub:1},
+			switches = {hide_title:1, filter:1, fallback_no_ancestor:1, fallback_include_parent:1, fallback_include_parent_siblings:1, fallback_no_children:1, fallback_nc_include_parent:1, fallback_nc_include_parent_siblings:1, flat_output:1, include_parent:1, include_parent_siblings:1, include_ancestors:1, title_from_parent:1, ol_root:1, ol_sub:1},
 			integers = {filter_item:1, start_level:1, depth:1},
 			getSettings = function(){
 				var settings = {};
@@ -262,16 +299,23 @@ jQuery(function($){
 				var output = $('#widget-output').empty(),
 						items = $('.picked'),
 						html = '',
+						title = '',
 						currLevel = 0,
-						startLevel, title;
+						startLevel;
 				settings = settings || getSettings();
 				if(items.length){
-					title = settings.hide_title ? '' : settings.title;
 					if(settings.filter && settings.title_from_parent){
 						title = $('.picked-parent').children('a').text() || '';
 					}
+					if(!title && settings.title_from_current){
+						title = $('.current-item').text() || '';
+					}
+					if(!title && !settings.hide_title){
+						title = settings.title || '';
+					}
 					items.each(function(){
-						var level = settings.flat_output ? 1 : parseInt(this.className.match(/level-(\d+)/)[1], 10);
+						var level = settings.flat_output ? 1 : parseInt(this.className.match(/level-(\d+)/)[1], 10),
+								anchor = $(this).children('a');
 						if(currLevel){
 							if(level === currLevel){
 								html += '</li>';
@@ -285,7 +329,7 @@ jQuery(function($){
 						}else{
 							startLevel = level;
 						}
-						html += '<li><a href="#">' + $(this).children('a').text() + '</a>';
+						html += '<li class="cmw-level-' + level + '"><a href="#' + anchor.data('indx') + '">' + anchor.text() + '</a>';
 						currLevel = level;
 					});
 					while(currLevel-- > startLevel){
@@ -296,6 +340,9 @@ jQuery(function($){
 					if(title){
 						output.prepend('<h3>' + title + '</h3>');
 					}
+					output.find('li').filter(function(){
+						return !!$(this).children('ul').length;
+					}).addClass('cmw-has-submenu');
 				}
 			},
 			walk = function(e){
@@ -306,6 +353,7 @@ jQuery(function($){
 						picked = items.filter('.picked'),
 						cls = [],
 						firstParent = true,
+						fallback = false,
 						parent, i;
 				if(!settings.filter){
 					//show all...
@@ -334,6 +382,7 @@ jQuery(function($){
 							parent = $('.current-item').closest('li');
 							includeParent = includeParent || settings.fallback_include_parent;
 							includeParentSiblings = includeParentSiblings || settings.fallback_include_parent_siblings;
+							fallback = !!parent.length;
 						}
 					}
 					//could be multiple - only want first one that matches start_level...
@@ -351,6 +400,14 @@ jQuery(function($){
 						});
 					//kids...
 					items = parent.find('li').filter( cls.join(',') );
+					//...if current item is looked for and found, but has no kids, and fallback is set...
+					if(parent.length && !settings.filter_item && !items.length && settings.fallback_no_children){
+						items = parent.siblings('li').add( parent );
+						includeParent = includeParent || settings.fallback_nc_include_parent;
+						includeParentSiblings = includeParentSiblings || settings.fallback_nc_include_parent_siblings;
+						parent = parent.parents('li').eq(0);
+						fallback = !!parent.length;
+					}
 					if(items.length){
 						if(includeParentSiblings){
 							items = items.add( parent.siblings('li') ).add( parent );
@@ -366,12 +423,12 @@ jQuery(function($){
 						parent.addClass('picked-parent');
 					}
 				}
+				$('#fallback')[fallback && items.length ? 'show' : 'hide']();
 				picked.not(items).removeClass('picked');
 				items.not('.picked').addClass('picked');
 				show.call(this, e, settings);
 			},
 			flds = $('input,select');
-	$('#widget-output').on('click', 'a', false);
 	$('#themenu a').on('click', function(){
 		//click on a #themenu item to [un]make it the current item...
 		var cls = ['current-item', 'current-parent', 'current-ancestor'],
@@ -389,12 +446,18 @@ jQuery(function($){
 		return false;
 	}).map(function(i){
 		//create filter_item's optgroup options...
-		var el = $(this),
+		var el = $(this).data('indx', i),
 				level = el.parentsUntil('#themenu', 'li').length;
 		maxlevel = Math.max(maxlevel, level);
 		el.parent().addClass('level-' + level);
 		return $('<option/>', {value:i + 1}).text( hyphenIndent(el.text(), level) ).get(0);
 	}).appendTo('optgroup');
+	//allow setting current from widget output (only setting, not un-setting!)...
+	$('#widget-output').on('click', 'a', function(){
+		var indx = this.href.split('#')[1];
+		$('#themenu a').eq(indx).not(':has(.current-item)').trigger('click');
+		return false;
+	});
 	//populate starting-level and depth options...
 	for(i = 1; i < maxlevel + 1; i++){
 		var levels = i < 2 ? ' level' : ' levels',
@@ -405,13 +468,24 @@ jQuery(function($){
 		}
 		$('<option/>', att).text(i).appendTo('#widget-custom-menu-wizard-2-start_level');
 	}
+	//interactivity (need to ensure that any delegated handlers from the included script get run first)...
+	flds.not( flds.filter('[type="text"]').on('blur', show) ).addClass('demo-change');
+	$(document).on('change', '.demo-change', walk);
+	//reset...
 	$('button').on('click', function(){
 		$(this).parent().get(0).reset();
 		$('#widget-custom-menu-wizard-2-filter_item').trigger('change');
 		return false;
-	});
-	flds.not( flds.filter('[type="text"]').on('blur', show) )
-		.on('change', walk).eq(0).trigger('change');
+	}).trigger('click');
+	//collapsibles...
+	$('.collapsible').on('click', function(){
+		var Self = $(this)
+				data = Self.data();
+		Self.toggleClass('closed', !data.closed).nextUntil('.end-collapsible')[data.closed ? 'slideDown' : 'slideUp']();
+		data.closed = !data.closed;
+		this.blur();
+		return false;
+	}).slice(1).trigger('click');
 });
 </script>
 </body>
