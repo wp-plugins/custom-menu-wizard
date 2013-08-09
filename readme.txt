@@ -398,6 +398,8 @@ If you have a question or problem, please use the integrated Support forum.
 
 * moved the 'no ancestor' fallback into new Fallback collapsible section, and added a fallback for Current Item with no children
 
+* added an option allowing setting of title from current menu item's title
+
 * fixed a bug with optgroups/options made available for the 'Children of' selector after the widget has been saved (also affected disabled fields and styling)
 
 * don't include menus with no items
