@@ -3,7 +3,7 @@ Contributors: wizzud
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,menu level,menu branch
 Requires at least: 3.0.1
 Tested up to: 3.6
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or Later
 
 Custom Menu Wizard Widget : Show branches or levels of your menu in a widget, with full customisation.
@@ -29,10 +29,14 @@ Features include:
 * *As of v1.1.0* : Select a branch based on the ultimate ancestor (root level) of the "current" item
 * *As of v1.2.0* : Shortcode, [custom_menu_wizard], available to run the widget from within content
 
-**Widget Options**
+Demo Emulator : [www.wizzud.com/custom-menu-wizard](http://www.wizzud.com/custom-menu-wizard/) - 
+even shows the shortcode for the options that have been set. (This emulator is also provided as part of the plugin)
+
+**WIDGET OPTIONS**
 
 There are quite a few options, which makes the widget settings box very long. I have therefore grouped most of the options into
-logical sections and made each section collapsible (with remembered state, open by default).
+logical sections and made each section collapsible (with remembered state once saved). As of v1.2.1, only the Filter section is
+open by default; all sections below that start off collapsed.
 
 * **Title**
 
@@ -169,6 +173,8 @@ logical sections and made each section collapsible (with remembered state, open 
 
         Again, this only applies to a successful `Children of` filter. If checked, use the title of the parent item as the widget's
         title when displaying the output. This will override (ie. ignore) the `Hide` checkbox setting!
+        
+        Please note that this is **not** the same as asking for the title from "the parent of the current menu item"!
 
     * **Title from "Current" Item** *(checkbox)*
 
@@ -244,7 +250,7 @@ logical sections and made each section collapsible (with remembered state, open 
 
         Text or HTML that will be placed immediately after each menu item's link text.
 
-**Shortcode**
+**SHORTCODE**
 
 The shortcode is **`[custom_menu_wizard]`**. Most of the attributes reflect the options available to the widget, but some have been simplified for 
 easier use in the shortcode format.
@@ -359,11 +365,11 @@ found then there will be no output from the shortcode.
 
 * Show the children of the Current Item within the "main" menu, for unlimited depth, and include the Current Item's parent :
 
-    `[custom_menu_wizard menu=main children_of=current include_parent=1]`
+    `[custom_menu_wizard menu=main children_of=current include=parent]`
 
 * From the "animals" menu, show all the items *immediately* below (depth=1) "Small Dogs", plus "Small Dogs" and its sibling items, as ordered lists :
 
-    `[custom_menu_wizard menu="animals" children_of="small dogs" depth=1 include_parent_siblings=1 ol_root=1 ol_sub=1]`
+    `[custom_menu_wizard menu="animals" children_of="small dogs" depth=1 include="siblings" ol_root=1 ol_sub=1]`
 
 == Installation ==
 
@@ -391,6 +397,20 @@ If you have a question or problem, please use the integrated Support forum.
 4. Demo / Helper
 
 == Changelog ==
+
+= 1.2.1 =
+
+* added some extra custom classes, when applicable : cmw-fellback-to-current & cmw-fellback-to-parent (on outer UL/OL) and cmw-the-included-parent, cmw-an-included-parent-sibling & cmw-an-included-ancestor (on relevant LIs)
+
+* corrected 'show all from start level 1' processing so that custom classes get applied and 'Title from "Current" Item' works (regardless of filter settings)
+
+* changed the defaults for new widgets such that only the Filter section is open by default; all the others are collapsed
+
+* in demo.html, added output of the shortcode applicable to the selections made
+
+* in demo.html, added a link to the documentation page
+
+* corrected 2 of the shortcode examples in the readme.txt, and made emulator (dem) available from the readme
 
 = 1.2.0 =
 
@@ -432,17 +452,14 @@ Initial release
 
 == Upgrade Notice ==
 
+= 1.2.1 =
+
+Added a few extra custom classes, and changed the defaults for new widgets such that only the Filter section is open by default. 
+Fixed Show All processing so that custom classes always get applied, and 'Title from "Current" Item' works regardless of filter settings. 
+Fixed a couple of the shortcode examples in the readme.txt, and added display of the applicable shortcode settings to the demo.html.
+
 = 1.2.0 =
 
 Added custom_menu_wizard shortcode, to run the widget from within content. Also added a new fallback for Current Item having no children, and
 moved all fallbacks into a collapsible Fallbacks section. Fixed a bug with optgroups/options made available for the 'Children of' selector 
 after the widget has been saved (also affected disabled fields and styling).
-
-= 1.1.0 =
-
-`Children of` has 2 extra options, for filtering using the Current Item's parent (immediate ancestor) or root (ultimate ancestor) item, 
-with fallbacks for when a Current Item has no ancestor. There is also an additional Output option which extends Include Parent to also 
-include the parent's siblings. An interactive helper/demo page is now available, which will hopefully assist in deciding which options 
-need setting for particular requirements. Other changes include tweaks to the management of the `Children of` SELECT (to allow for IE), 
-a few style enhancements to the presentation of the widget in admin, and removal of the `Hide Widget if Empty` option for WP v3.6 (still 
-presented for WP < 3.6 though!).
