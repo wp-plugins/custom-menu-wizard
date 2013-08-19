@@ -398,6 +398,10 @@ If you have a question or problem, please use the integrated Support forum.
 
 == Changelog ==
 
+= 1.2.2 =
+
+* bugfix : fallback for Current Item with no children was failing because the parent's children weren't being picked out correctly
+
 = 1.2.1 =
 
 * added some extra custom classes, when applicable : cmw-fellback-to-current & cmw-fellback-to-parent (on outer UL/OL) and cmw-the-included-parent, cmw-an-included-parent-sibling & cmw-an-included-ancestor (on relevant LIs)

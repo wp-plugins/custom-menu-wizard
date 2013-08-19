@@ -3,13 +3,15 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Full control over the wp_nav_menu parameters for a custom menu; filter for specific level(s), for children of a selected menu item, the current menu item, or its parent or root item 
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 
 /*
+ * v1.2.2 change log:
+ * - bugfix : fallback for Current Item with no children was failing because the parent's children weren't being picked out correctly
  * v1.2.1 change log:
  * - added some extra custom classes, when applicable : cmw-fellback-to-current & cmw-fellback-to-parent (on outer UL/OL) and cmw-the-included-parent, cmw-an-included-parent-sibling & cmw-an-included-ancestor (on relevant LIs)
  * - corrected 'show all from start level 1' processing so that custom classes get applied and 'Title from "Current" Item' works (regardless of filter settings)
@@ -34,7 +36,7 @@
  * - moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript
  */
 
-$Custom_Menu_Wizard_Widget_Version = '1.2.1';
+$Custom_Menu_Wizard_Widget_Version = '1.2.2';
 
 /**
  * registers the widget and adds the shortcode
@@ -239,7 +241,8 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				// - ... optionally plus its parent (if there is one) and the parent's siblings
 				//keep_ids[0] is the id of the current item; put the parent's kids into keep_items...
 				foreach( $temp[ $temp[ $keep_ids[0] ]['parent'] ]['kids'] as $item ){
-					$keep_items[] = $item;
+					//v1.2.2 note : each 'kid' is an index into $elements!
+					$keep_items[] = $elements[ $item ];
 				}
 				$include_parent = $include_parent || $cmw['fallback_nc_include_parent'];
 				$include_parent_siblings = $include_parent_siblings || $cmw['fallback_nc_include_parent_siblings'];
