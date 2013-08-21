@@ -456,6 +456,10 @@ Initial release
 
 == Upgrade Notice ==
 
+= 1.2.2 =
+
+Bugfix : The fallback for Current Item with no children was failing because the parent's children weren't being picked out correctly
+
 = 1.2.1 =
 
 Added a few extra custom classes, and changed the defaults for new widgets such that only the Filter section is open by default. 
