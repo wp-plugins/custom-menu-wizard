@@ -6,7 +6,7 @@ Tested up to: 3.6
 Stable tag: 1.2.2
 License: GPLv2 or Later
 
-Custom Menu Wizard Widget : Show branches or levels of your menu in a widget, with full customisation.
+Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
 
 == Description ==
 
@@ -28,11 +28,14 @@ Features include:
 * Use Ordered Lists (OL) for the top and/or sub levels instead of Unordered Lists (UL)
 * *As of v1.1.0* : Select a branch based on the ultimate ancestor (root level) of the "current" item
 * *As of v1.2.0* : Shortcode, [custom_menu_wizard], available to run the widget from within content
+* *As of v2.0.0* : Make the output conditional upon the "current" item appearing in the selected/included items
+* *As of v2.0.0* : Specify specific menu items
+* *As of v2.0.0* : Use the widget's interactive "assist" to help with the widget settings or shortcode definition 
 
-Demo Emulator : [www.wizzud.com/custom-menu-wizard](http://www.wizzud.com/custom-menu-wizard/) - 
-even shows the shortcode for the options that have been set. (This emulator is also provided as part of the plugin)
+Documentation for the Widget Options, and the associated Shortcode Parameters, can be found under 
+[Other Notes](http://wordpress.org/plugins/custom-menu-wizard/other_notes/).
 
-**WIDGET OPTIONS**
+== Widget Options ==
 
 There are quite a few options, which makes the widget settings box very long. I have therefore grouped most of the options into
 logical sections and made each section collapsible (with remembered state once saved). As of v1.2.1, only the Filter section is
@@ -78,21 +81,37 @@ open by default; all sections below that start off collapsed.
         
         If you change `Select Menu`, the options presented in this dropdown will change accordingly and the selected option will revert to the default.
 
+    * **Items** (radio & text input)* as of v2.0.0
+
+        Takes a comma- or space-delimited list of menu item ids, specifiying the specific menu items that are required. This is intended
+        for situations that it is not possible to handle using other option settings. The simplest way to determine the menu item ids is
+        to use the "assist" facility.
+        
+        Note that the `Starting Level` and `Depth` options (including `Relative to "Current" Item`) have no effect if `Items` is set.
+
     * **Starting Level** *(select, default: "1")*
 
         This is the level within the chosen menu (from `Select Menu`) that the widget will start looking for items to keep. Obviously, level 1
         is the root level (ie. those items that have no parent item); level 2 is all the immediate children of the root level items, and so on.
         Note that for a `Children of` filter there is no difference between level 1 and level 2 (because there are no children at level 1).
+        Also note that this option does not apply if `Items` is set.
 
     * **For Depth** *(select, default: "unlimited")*
 
         This is the maximum depth of the eventual output structure after filtering, and in the case of `Flat` output being requested it is
         still applied - as if the output were `Hierarchical` and then flattened at the very last moment.
         
-        You need to be aware that the
+        You need to be aware that, by default, the
         `For Depth` setting is applied relative to the level at which the first item to be kept is found. For example, say you were to set
         `Children of` to "Current Item", `Starting Level` to "2", and `For Depth` to "2 levels" : if the current item was found at level 3,
         then you would get the current item's immediate children (from level 4), plus *their* immediate children (from level 5).
+        Note that this option does not apply if `Items` is set.
+
+    * **Relative to "Current" Item** *(checkbox)* as of v2.0.0
+        
+        This changes the `For Depth` option such that depth is applied relative to the current menu item, instead of relative to the
+        first item found that is to be kept. It only has any effect when `For Depth` is set to something other than "unlimited", and when
+        the current menu item is within the filtered items (before taking `For Depth` into account).
 
 * **Fallbacks**
 
@@ -155,6 +174,10 @@ open by default; all sections below that start off collapsed.
 
         Output in a single list format, ignoring any parent-child relationship other than to maintain the same physical order as would be
         presented in a `Hierarchical` output.
+
+    * **Must Contain "Current" Item** *(checkbox)* as of v2.0.0
+    
+        If checked, the widget will not list any menu items unless the current menu item appears somewhere in the list.
 
     * **Include Parent...** *(checkbox)*
 
@@ -250,12 +273,13 @@ open by default; all sections below that start off collapsed.
 
         Text or HTML that will be placed immediately after each menu item's link text.
 
-**SHORTCODE**
+== Shortcode Parameters ==
 
-The shortcode is **`[custom_menu_wizard]`**. Most of the attributes reflect the options available to the widget, but some have been simplified for 
-easier use in the shortcode format.
-Please note that the `Hide Widget if Empty` option is not available to the shortcode : it is set to enabled, and if there are no menu items
-found then there will be no output from the shortcode.
+The shortcode is **`[custom_menu_wizard]`**. Most of the attributes reflect the options available to the widget, but some have been simplified for easier use in the shortcode format.
+Please note that the `Hide Widget if Empty` option is not available to the shortcode : it is set to enabled, and if there are no menu items found then there will be no output from the shortcode.
+
+The simplest way to build a shortcode is to use the widget's "assist" facility (new in v2.0.0). The facilty is available even when the widget is in 
+the Inactive Widgets area, so you don't have to add an unwanted instance of the widget to a sidebar.
 
 * **title** *(string)*
 
@@ -268,7 +292,8 @@ found then there will be no output from the shortcode.
 
 * **children_of** *(string | integer)*
 
-    If empty, or not provided, this is the same as enabling `Show All` (see above) for the widget. Anything else is a `Children of` filter :
+    If not empty then it specifies a `Children of` filter. If neither `children_of` nor `items` are supplied (or are empty) then the 
+    filter defaults back to `Show all` (see above). Note that `items`, if supplied, will take precedence over `children_of`.
   
     * If numeric, it is taken as being the id of a menu item. The widget will look for the `Children of` that menu item (within `menu`).
       (Hint : In Menus Admin, hover over the item's **Remove** link and note the number after *menu-item=* in the URL)
@@ -283,7 +308,10 @@ found then there will be no output from the shortcode.
 
     * If any other string, it is taken to be the title of a menu item. The widget will look for the `Children of` that menu item
       (within `menu`). Please note that the code looks for a *caseless* title match, so specifying `children_of="my menu item"` will
-      match against a menu item with the title "My Menu Item".
+      match against a menu item with the title "My Menu Item". Also note that the first match found (hierarchically) is the one that
+      gets used (it is quite possible to have same-named items within a menu structure).
+
+* **items** *(string)* See widget's `Items` option, under **Filter** above.
 
 * **fallback_parent** *(string | integer)*
 
@@ -310,8 +338,12 @@ found then there will be no output from the shortcode.
 * **start_level** *(integer, default 1)* See widget's `Starting Level` option, under **Filter** above.
 
 * **depth** *(integer, default 0)* See widget's `For Depth` option, under **Filter** above.
+
+* **depth_rel_current** *(switch, off by default, 1 to enable)* See widget's `Relative to "Currrent" Item` option, under **Filter** above.
     
 * **flat_output** *(switch, off by default, 1 to enable)* See widget's `Flat` option, under **Output** above.
+
+* **contains_current** *(switch, off by default, 1 to enable)* See widget's `Must Contain "Current" Item` option, under **Output** above.
 
 * **include** *(string)*
 
@@ -347,13 +379,13 @@ found then there will be no output from the shortcode.
 
 * **wrap_link** *(string)*
 
-    This is an optional tag name (eg. *'div'*, *'p'*, *'span*') that, if provided, will be made into HTML start/end tags
+    This is an optional tag name (eg. *'div'*, *'p'*, *'span'*) that, if provided, will be made into HTML start/end tags
     and sent through to the widget as its `Before the Link` and `After the Link` options. Please note that the shortcode usage - a simple
     tag name - is much more restrictive than the widget's options, which allow HTML.
 
 * **wrap_link_text** *(string)*
 
-    This is an optional tag name (eg. *'span*', *'em'*, '*strong*') that, if provided, will be made into HTML start/end tags
+    This is an optional tag name (eg. *'span'*, *'em'*, *'strong'*) that, if provided, will be made into HTML start/end tags
     and sent through to the widget as its `Before the Link Text` and `After the Link Text` options. Please note that the shortcode usage - a
     simple tag name - is much more restrictive than the widget's options, which allow HTML.
 
@@ -361,15 +393,21 @@ found then there will be no output from the shortcode.
 
 * Show the entire "main" menu :
 
-    `[custom_menu_wizard menu=main]`
+    `
+    [custom_menu_wizard menu=main]
+    `
 
 * Show the children of the Current Item within the "main" menu, for unlimited depth, and include the Current Item's parent :
 
-    `[custom_menu_wizard menu=main children_of=current include=parent]`
+    `
+    [custom_menu_wizard menu=main children_of=current include=parent]
+    `
 
 * From the "animals" menu, show all the items *immediately* below (depth=1) "Small Dogs", plus "Small Dogs" and its sibling items, as ordered lists :
 
-    `[custom_menu_wizard menu="animals" children_of="small dogs" depth=1 include="siblings" ol_root=1 ol_sub=1]`
+    `
+    [custom_menu_wizard menu="animals" children_of="small dogs" depth=1 include="siblings" ol_root=1 ol_sub=1]
+    `
 
 == Installation ==
 
@@ -380,11 +418,56 @@ found then there will be no output from the shortcode.
 1. Activate the plugin through the 'Plugins' menu in your WP Admin
 
 The widget will now be available in the 'Widgets' admin page. 
-As long as you already have at least one Menu defined, you can add the new widget to a sidebar and configure it however you want.
+As long as you already have at least one Menu defined, you can add the new widget to a sidebar and configure it however you want. 
+Alternatively, you can use the shortcode in your content.
 
 == Frequently Asked Questions ==
 
-If you have a question or problem, please use the integrated Support forum.
+If you have a question or problem that is not covered here, please use the integrated Support forum.
+
+= Why isn't it working? Why is there no output? =
+
+I don't know. With all due respect (and a certain amount of confidence in the widget) I would venture to suggest that it is probably due to 
+the option settings on the widget/shortcode. The quickest way to resolve any such issues is to use the widget's interactive "assist", and 
+ensure that you set the current menu item correctly for the page(s) that you are having problems with. However, I am well aware that I not 
+infallible, and if you still have problems then please let me have as much information as possible and I will endeavour to help. (Please 
+note that simply reporting "It doesn't work" is not the most useful of feedbacks, and is unlikely to get a response other than, possibly, 
+a request for more details).
+
+= How do I use the "assist"? =
+
+The widget's interactive "assist" is specific to each widget instance. It is a javascript-driven *emulator* that uses the widget instance's 
+option settings - including the menu selected - to build a pictorial representation of the menu and show you, in blue, which menu items will 
+be output according to the current option settings. It also shows a very basic output list of those menu items, although it will not apply 
+some of the more advanced HTML-modifying options such as can be found under the Container, Classes or Links sections.
+Any of the displayed menu items can be designated as the "current menu item" simply by clicking on it (click again to deselect, or another 
+item to change). The "current menu item" is shaded red, with its parent shaded orange and ancestors shaded yellow. All changes in the 
+"current menu item" and the widget options are immediately reflected by the "assist" (text fields in the widget options simply need to lose 
+focus).
+
+Once you are happy with the results, having tested all possible settings of "current menu item" (if it applies), then simply Save the widget. 
+Alternatively, simply copy-paste the shortcode code produced by the "assist" straight into your post (you do not need to Save the widget!).
+The widget does not have to Saved to *test* any of the options.
+
+= Is there an easy way to construct the shortcode to get the results that I want? =
+
+Yes. Use the widget's interactive "assist" capability (see above). Note that you do not need to have the widget in a sidebar : the 
+"assist" also works off a widget that is in the Inactive Widgets area of the widget admin page.
+
+= How do I get the menu item ids for the `Items` option? =
+
+Use the widget's interactive "assist" (see above). Within the representation menu structure, each menu item's id is set in its title 
+attribute, so should be seen when the cursor is moved over the item. A simpler way is to check the `Items` option : the "assist" will 
+then show a checkbox beside each menu item and you simply [un]check the items as required. Each selection will be reflected back into the 
+widget's `Items` settings, and also in the shortcode code.
+
+Alternatively, go to Appearance, Menus and select the relevant menu; hover over the edit, Remove, or Cancel link for an item and look in 
+the URL (the link's href) for `menu-item=NNN` ... the NNN is the menu item id.
+
+= Why is the `Must Contain Current Item` option in the Output section and not in the Filter section? =
+
+It was a close call, but since the Output options can extend the final list - and the check for "current menu item" is made against the 
+*entire* resultant list - I decided that `Must contain Current Item` was more of a "final output" check than an initial filter.
 
 == Screenshots ==
 
@@ -394,13 +477,29 @@ If you have a question or problem, please use the integrated Support forum.
 
 3. Even more widget options
 
-4. Demo / Helper
+4. Widget's "assist"
 
 == Changelog ==
 
+= 2.0.0 =
+
+* **! Possible Breaker !** The calculation of `Start Level` has been made consistent across the `Show all` and `Children of` filters : if you previously had a setup where you were filtering for the children of an item at level 2, with start level set to 4, there would have been no output because the immediate children (at level 3) were outside the start level. Now, there *will* be output, starting with the grand-children (at level 4).
+
+* **! Possible Breaker !** There is now deemed to be an artificial "root" item above the level 1 items, which mean that a `Children of` filter set to "Current Parent Item" or "Current Root Item" will no longer fail for a top-level "current menu item". If you have the "no ancestor" fallback set then this change will have no impact (but you may now want to consider turning the fallback off?); if you *don't* currently use the "no ancestor" fallback, then where there was previously no output there will now be some!
+
+* added new option : Items, a comma- or space-delimited list of menu item ids, as an alternative Filter
+
+* added new option : Depth Relative to Current Item to the Filter section (depth_rel_current=1 in the shortcode)
+
+* added new option : Must Contain Current Item to the Output section (contains_current=1 in the shortcode)
+
+* changed the widget's "demo" facility to "assist" and brought it into WordPress admin, with full interactivity with the widget
+
+* refactored code
+
 = 1.2.2 =
 
-* fixed bug : fallback for Current Item with no children was failing because the parent's children weren't being picked out correctly
+* bugfix : fallback for Current Item with no children was failing because the parent's children weren't being picked out correctly
 
 = 1.2.1 =
 
@@ -414,7 +513,7 @@ If you have a question or problem, please use the integrated Support forum.
 
 * in demo.html, added a link to the documentation page
 
-* corrected 2 of the shortcode examples in the readme.txt, and made emulator (dem) available from the readme
+* corrected 2 of the shortcode examples in the readme.txt, and made emulator (demo) available from the readme
 
 = 1.2.0 =
 
@@ -434,7 +533,7 @@ If you have a question or problem, please use the integrated Support forum.
 
 * added 'Current Root Item' and 'Current Parent Item' to the `Children of` filter
 
-* added `Fallback to Current Item` option, with subsibiary options for overriding a couple of Output options, as a means to enable Current Root & Current Parent to match a Current Item at root level
+* added `Fallback to Current Item` option, with subsidiary options for overriding a couple of Output options, as a means to enable Current Root & Current Parent to match a Current Item at root level
 
 * added an Output option to include both the parent item **and** the parent's siblings (for a successful `Children of` filter)
 
@@ -456,7 +555,21 @@ Initial release
 
 == Upgrade Notice ==
 
+= 2.0.0 =
+
+**! Possible Breaker !** My apologies if this affects you, but there are 2 possible scenarios where settings that previously resulted in no output *might* now produce output : 
++ if you have set a `Children of` filter, **and** you have changed the `Start Level` to a level greater than 2, or
++ if you have set the `Children of` filter to Current Parent/Root Item, and you have **not** set the "no ancestor" fallback.
+*__If you think you may be impacted, please check the [Changelog](http://wordpress.org/plugins/custom-menu-wizard/changelog/) for a fuller explanation of what has changed.__*
+
+New options :
++ `Items` allows specific menu item ids to be listed, as an alternative to the other filters
++ `Relative to "Current" Item` allows a limited Depth to be calculated relative to the current menu item
++ `Must Contain "Current" Item` requires that there be no output unless the resultant list contains the current menu item.
+Rebuilt the "demo" facility as an "assist" wizard for the widget It is now fully interactive with the widget instance, and generates the entire shortcode according to the widget instance settings.
+
 = 1.2.2 =
+
 Bugfix : The fallback for Current Item with no children was failing because the parent's children weren't being picked out correctly
 
 = 1.2.1 =
@@ -467,6 +580,6 @@ Fixed a couple of the shortcode examples in the readme.txt, and added display of
 
 = 1.2.0 =
 
-Added custom_menu_wizard shortcode, to run the widget from within content. Also added a new fallback for Current Item having no children, and
-moved all fallbacks into a collapsible Fallbacks section. Fixed a bug with optgroups/options made available for the 'Children of' selector 
-after the widget has been saved (also affected disabled fields and styling).
+Added custom_menu_wizard shortcode, to run the widget from within content.
+Added a new fallback for Current Item having no children, and moved all fallbacks into a collapsible Fallbacks section.
+Fixed a bug with optgroups/options made available for the 'Children of' selector after the widget has been saved (also affected disabled fields and styling).
