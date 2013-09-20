@@ -481,6 +481,10 @@ It was a close call, but since the Output options can extend the final list - an
 
 == Changelog ==
 
+= 2.0.1 =
+
+* bugfix : an incorrect test for a specific-items filter prevented show-all producing any output
+
 = 2.0.0 =
 
 * **! Possible Breaker !** The calculation of `Start Level` has been made consistent across the `Show all` and `Children of` filters : if you previously had a setup where you were filtering for the children of an item at level 2, with start level set to 4, there would have been no output because the immediate children (at level 3) were outside the start level. Now, there *will* be output, starting with the grand-children (at level 4).
@@ -554,6 +558,10 @@ It was a close call, but since the Output options can extend the final list - an
 Initial release
 
 == Upgrade Notice ==
+
+= 2.0.1 =
+
+Fixed a bug whereby a test for a specific-items filter prevented show-all from producing any output.
 
 = 2.0.0 =
 

@@ -3,13 +3,16 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 2.0.0
+ * Version: 2.0.1
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 
 /*
+ * v2.0.1 change log:
+ * - fixed bug that set a specific items filter when it shouldn't have been set, and prevented show-all working
+ * 
  * v2.0.0 change log:
  * - Possible Breaker! : start level has been made consistent for showall and kids-off filters. Previously, a kids-of filter on an item at level 2,
  *   with start level set to 4, would return no output because the immediate kids (at level 3) were outside the start level; now, there will
@@ -48,7 +51,7 @@
  * - moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript
  */
 
-$Custom_Menu_Wizard_Widget_Version = '2.0.0';
+$Custom_Menu_Wizard_Widget_Version = '2.0.1';
 
 /**
  * registers the widget and adds the shortcode
@@ -227,7 +230,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			$cmw['_walker']['fellback'] = false;
 
 			$find_kids_of = $cmw['filter'] > 0;
-			$find_specific_items = $cmw['filter'] < 1; //v2.0.0
+			$find_specific_items = $cmw['filter'] < 0; //v2.0.0 //v2.0.1:bug fixed (changed < 1 to < 0)
 			$find_current_item = $find_kids_of && empty( $cmw['filter_item'] );
 			$find_current_parent = $find_kids_of && $cmw['filter_item'] == -1; //v1.1.0
 			$find_current_root = $find_kids_of && $cmw['filter_item'] == -2; //v1.1.0
