@@ -3,7 +3,7 @@ Contributors: wizzud
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,menu level,menu branch
 Requires at least: 3.0.1
 Tested up to: 3.6
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
