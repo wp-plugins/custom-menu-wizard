@@ -1,5 +1,5 @@
 /* Plugin Name: Custom Menu Wizard
- * Version: 2.0.1
+ * Version: 2.0.2
  * Author: Roger Barrett
  * 
  * Script for controlling this widget's options (in Admin -> Widgets)
@@ -450,7 +450,7 @@ jQuery(function($){
 							}
 						}else if(parent && parent.length){
 							//kids of...
-							if(settings.depth_rel_current && settings.depth && currentItemLI.length && parent.has(currentItemLI[0])){
+							if(settings.depth_rel_current && settings.depth && currentItemLI.length && parent.has(currentItemLI[0]).length){
 								j = currentItemLevel - 1 + settings.depth;
 							}else{
 								j = settings.depth ? Math.max( (parent.data().level || 0) + settings.depth, settings.start_level + settings.depth - 1 ) : 9999;

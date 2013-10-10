@@ -3,13 +3,18 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 2.0.1
+ * Version: 2.0.2
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 
 /*
+ * v2.0.2 change log:
+ * - fixed bug where Include Ancestors was not automatically including the Parent
+ * - fixed bug where the "assist" was incorrectly calculating Depth Relative to Current Item when the current menu item was outside the scope of the Filtered items
+ * - behaviour change : only recognise the first "current" item found (used to allow subsequent "current" items to override any already encountered)
+ * 
  * v2.0.1 change log:
  * - fixed bug that set a specific items filter when it shouldn't have been set, and prevented show-all working
  * 
@@ -51,7 +56,7 @@
  * - moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript
  */
 
-$Custom_Menu_Wizard_Widget_Version = '2.0.1';
+$Custom_Menu_Wizard_Widget_Version = '2.0.2';
 
 /**
  * registers the widget and adds the shortcode
@@ -236,7 +241,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			$find_current_root = $find_kids_of && $cmw['filter_item'] == -2; //v1.1.0
 			$depth_rel_current = $cmw['depth_rel_current'] && $cmw['depth'] > 0; //v2.0.0
 			//these could change depending on whether a fallback comes into play (v1.1.0)
-			$include_parent = $cmw['include_parent'];
+			$include_parent = $cmw['include_parent'] || $cmw['include_ancestors'];
 			$include_parent_siblings = $cmw['include_parent_siblings'];
 
 			$id_field = $this->db_fields['id']; //eg. = 'db_id'
@@ -265,7 +270,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				//also note that orphans (in the original menu) are ignored by this widget!
 				if( isset( $structure[ $parentID ] ) ){
 					//keep track of current item (as a structure key)...
-					if( $item->current ){
+					if( $item->current && empty( $currentItem ) ){
 						$currentItem = $itemID;
 					}
 					//this level...

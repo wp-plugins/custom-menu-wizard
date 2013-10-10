@@ -425,6 +425,14 @@ Alternatively, you can use the shortcode in your content.
 
 If you have a question or problem that is not covered here, please use the integrated Support forum.
 
+= Are there any known problems?
+
+Yep, 'fraid so :
+
+1. The widget will only recognise one "current" item (as of v2.0.2, that's the first one encountered; prior to that it was the last one found). It is perfectly possible to have more than one menu item marked as "current" (adding a page twice to a menu, for example), but if CMW has been configured to filter on anything related to a "current item" it can only choose one. This may also cause problems with some plugins that can affect a menu (PolyLang's language-switcher is one known example).
+
+2. The widget does not play well with PolyLang's language-switcher when it has been added to a menu that the widget is filtering.
+
 = Why isn't it working? Why is there no output? =
 
 I don't know. With all due respect (and a certain amount of confidence in the widget) I would venture to suggest that it is probably due to 
@@ -480,6 +488,14 @@ It was a close call, but since the Output options can extend the final list - an
 4. Widget's "assist"
 
 == Changelog ==
+
+= 2.0.2 =
+
+* bugfix : the Include Ancestors option was not automatically including the Parent
+
+* bugfix : the "assist" was incorrectly calculating Depth Relative to Current Item when the current menu item was outside the scope of the Filtered items
+
+* behaviour change : only recognise the first "current" item found (used to allow subsequent "current" items to override any already encountered)
 
 = 2.0.1 =
 
@@ -558,6 +574,12 @@ It was a close call, but since the Output options can extend the final list - an
 Initial release
 
 == Upgrade Notice ==
+
+= 2.0.2 =
+
+Fixed a bug with the Include Ancestors option, where it was not automatically including the Parent.
+Fixed a bug in the "assist", where it was incorrectly calculating Depth Relative to Current Item when the current menu item was outside the scope of the Filtered items.
+Changed determination of the "current" item such that only the first one encountered is recognised, rather than allowing subsequent "current" items to override previous ones.
 
 = 2.0.1 =
 
