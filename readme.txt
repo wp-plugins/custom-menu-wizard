@@ -2,8 +2,8 @@
 Contributors: wizzud
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,menu level,menu branch
 Requires at least: 3.0.1
-Tested up to: 3.6
-Stable tag: 2.0.2
+Tested up to: 3.7.1
+Stable tag: 2.0.3
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -489,6 +489,10 @@ It was a close call, but since the Output options can extend the final list - an
 
 == Changelog ==
 
+= 2.0.3 =
+
+* bugfix : missing global when enqueuing scripts and styles for admin
+
 = 2.0.2 =
 
 * bugfix : the Include Ancestors option was not automatically including the Parent
@@ -574,6 +578,10 @@ It was a close call, but since the Output options can extend the final list - an
 Initial release
 
 == Upgrade Notice ==
+
+= 2.0.3 =
+
+Fixed a minor bug with a missing global when enqueuing script and style for the admin.
 
 = 2.0.2 =
 
