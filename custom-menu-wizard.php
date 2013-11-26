@@ -2,14 +2,45 @@
 /*
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
- * Description: Full control over the wp_nav_menu parameters for a custom menu, plus the ability to filter for specific level(s), or for children of a selected menu item or the current item
- * Version: 1.2.0
+ * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
+ * Version: 2.0.3
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 
 /*
+ * v2.0.3 change log:
+ * - fixed bug with missing global when enqueuing scripts and styles for admin page
+ * 
+ * v2.0.2 change log:
+ * - fixed bug where Include Ancestors was not automatically including the Parent
+ * - fixed bug where the "assist" was incorrectly calculating Depth Relative to Current Item when the current menu item was outside the scope of the Filtered items
+ * - behaviour change : only recognise the first "current" item found (used to allow subsequent "current" items to override any already encountered)
+ * 
+ * v2.0.1 change log:
+ * - fixed bug that set a specific items filter when it shouldn't have been set, and prevented show-all working
+ * 
+ * v2.0.0 change log:
+ * - Possible Breaker! : start level has been made consistent for showall and kids-off filters. Previously, a kids-of filter on an item at level 2,
+ *   with start level set to 4, would return no output because the immediate kids (at level 3) were outside the start level; now, there will
+ *   be output, starting with the grand-kids (at level 4)
+ * - Possible Breaker! : there is now an artificial "root" above the top level menu items, which means that a parent or root children-of filter will no 
+ *   longer fail for a top-level current menu item; this may well obviate the need for the current item fallback, but it has been left in for
+ *   backward compatibility.
+ * - added option for calculating depth relative to current menu item
+ * - added option allowing list output to be dependent on current menu item being present somewhere in the list
+ * - refactored the code
+ * 
+ * v1.2.2 change log:
+ * - bugfix : fallback for Current Item with no children was failing because the parent's children weren't being picked out correctly
+ * 
+ * v1.2.1 change log:
+ * - added some extra custom classes, when applicable : cmw-fellback-to-current & cmw-fellback-to-parent (on outer UL/OL) and cmw-the-included-parent, cmw-an-included-parent-sibling & cmw-an-included-ancestor (on relevant LIs)
+ * - corrected 'show all from start level 1' processing so that custom classes get applied and 'Title from "Current" Item' works (regardless of filter settings)
+ * - changed the defaults for new widgets such that only the Filter section is open by default; all the others are collapsed
+ * - updated demo.html and readme.txt, and made demo available from readme
+ * 
  * v1.2.0 change log:
  * - added custom_menu_wizard shortcode, to run the widget from within content
  * - moved the 'no ancestor' fallback into new Fallback collapsible section, and added a fallback for Current Item with no children
@@ -28,7 +59,7 @@
  * - moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript
  */
 
-$Custom_Menu_Wizard_Widget_Version = '1.2.0';
+$Custom_Menu_Wizard_Widget_Version = '2.0.3';
 
 /**
  * registers the widget and adds the shortcode
@@ -43,9 +74,92 @@ add_action('widgets_init', 'custom_menu_wizard_register_widget');
  * enqueues script file for the widget admin
  */
 function custom_menu_wizard_widget_admin_script(){
-	wp_enqueue_script('custom-menu-wizard-plugin-script', plugins_url('/custom-menu-wizard.js', __FILE__), array('jquery'), $Custom_Menu_Wizard_Widget_Version);
+	global $wp_scripts, $Custom_Menu_Wizard_Widget_Version;
+	wp_enqueue_style('custom-menu-wizard-plugin-styles', plugins_url('/custom-menu-wizard.css', __FILE__), array(), $Custom_Menu_Wizard_Widget_Version);
+	wp_enqueue_script('custom-menu-wizard-plugin-script', plugins_url('/custom-menu-wizard.min.js', __FILE__), array('jquery-ui-dialog'), $Custom_Menu_Wizard_Widget_Version);
+	if( !wp_style_is( 'jquery-ui', 'registered' ) ) {
+		$jquery_ui_version = isset( $wp_scripts->registered['jquery-ui-core']->ver ) ? $wp_scripts->registered['jquery-ui-core']->ver : '1.9.2';
+		wp_register_style( 'jquery-ui', 'http://ajax.googleapis.com/ajax/libs/jqueryui/' . $jquery_ui_version . '/themes/smoothness/jquery-ui.css' );
+	}
+	wp_enqueue_style( 'jquery-ui' );
 }
 add_action('admin_print_scripts-widgets.php', 'custom_menu_wizard_widget_admin_script');
+
+/**
+ * puts the contents of the Upgrade Notice (from readme.txt) for a new version under the widget's entry in Appearances - Widgets
+ */
+function custom_menu_wizard_update_message($plugin_data, $r){
+	global $Custom_Menu_Wizard_Widget_Version;
+	$readme = wp_remote_fopen( 'http://plugins.svn.wordpress.org/custom-menu-wizard/trunk/readme.txt' );
+//	$readme = file_get_contents( plugins_url( '/readme.txt', __FILE__ ) );
+	if(!empty($readme)){
+		//grab the Upgrade Notice section from the readme...
+		if(preg_match('/== upgrade notice ==(.+)(==|$)/ims', $readme, $match) > 0){
+			$readme = $match[1];
+		}else{
+			$readme = '';
+		}
+	}
+	if(!empty($readme)){
+		//if there's a heading for the currently installed version, take anything above it...
+		if(($match = strpos($readme, "= $Custom_Menu_Wizard_Widget_Version =")) !== false){
+			$readme = substr($readme, 0, $match);
+		}
+		//trim it...
+		$readme = trim(str_replace("\r", '', $readme), " \n");
+	}
+	if(!empty($readme)){
+		$readme = preg_replace(
+			array(
+				'/^= (\d+\.\d+\.\d+.*) =/m',    // => /P H4 Upgrade Notice ... /H4 P
+				'/(__|\*\*)!\s?([^*]+!)\1/',    // => STRONG red ... /STRONG
+				'/(__|\*\*)([^*]+)\1/',         // => STRONG ... /STRONG
+				'/\*([^*]+)\*/',                // => EM ... /EM
+				'/`([^`]+)`/',                  // => CODE ... /CODE
+				'/\[([^\]]+)\]\(([^\)]+)\)/',   // => A ... /A
+				'/\n\+\s+/',                    // => SPAN indented bullet
+				'/\n[ \n]*/',                   // => BR
+				//remove breaks that immediately follow/precede a paragraph start/end tag...
+				'/(<p[^>]*>)<br\s\/>/',         // => P
+				'/<br\s\/>(<\/p>)/'             // => /P
+			),
+			array(
+				'</p><h4 style="margin:0;"><em>' . __("Upgrade Notice") . ' $1</em></h4><p style="margin:0.25em 1em;">',
+				'<strong style="color:#cc0000;">$2</strong>',
+				'<strong>$2</strong>',
+				'<em>$1</em>',
+				'<code>$1</code>',
+				'<a href="$2">$1</a>',
+				"\n" . '&nbsp;<span style="margin:0 0.5em;">&bull;</span>',
+				'<br />',
+				'$1',
+				'$1'
+			),
+			//convert html chars...
+			esc_html($readme)
+			);
+		//remove the *first* P end tag...
+		$readme = preg_replace('/<\/p>/', '', $readme . '</p>', 1);
+	}
+	//show if not empty...
+	if(!empty($readme)){
+?>
+<div style="font-weight:normal;background-color:#fff0c0;border:1px solid #ff9933;border-radius:0.5em;margin:0.5em;">
+	<div style="margin:0.5em 0.5em 0.5em 1em;max-height:12em;overflow:auto;">
+		<?php echo $readme; ?>
+	</div>
+</div>
+<?php
+	}
+}
+/**
+ * if the plugin has an update...
+ */
+function custom_menu_wizard_admin_menu(){
+	add_action('in_plugin_update_message-' . plugin_basename(__FILE__), 'custom_menu_wizard_update_message', 10, 2);
+}
+add_action('admin_menu', 'custom_menu_wizard_admin_menu');
+
 
 /*
  * Custom Menu Wizard Walker class
@@ -96,7 +210,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 
 			$cmw =& $args->_custom_menu_wizard;
 			//in $cmw (array) :
-			//  filter : true = kids of (current [root|parent] item or specific item)
+			//  filter : 0 = show all; 1 = kids of (current [root|parent] item or specific item); -1 = specific items (v2.0.0)
 			//  filter_item : 0 = current item, -1 = parent of current (v1.1.0), -2 = root ancestor of current (v1.1.0); else a menu item id
 			//  flat_output : true = equivalent of $max_depth == -1
 			//  include_parent : true = include the filter_item menu item
@@ -106,258 +220,337 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			//  title_from_current : true = widget wants current item's title (v1.2.0)
 			//  start_level : integer, 1+
 			//  depth : integer, replacement for max_depth and also applied to 'flat' output
+			//  depth_rel_current : true = changes depth calc from "relative to first filtered item found" to "relative to current item's level" (if current item is found below level/branch) (v2.0.0)
 			//  fallback_no_ancestor : true = if looking for an ancestor (root or parent) of a top-level current item, fallback to current item (v1.1.0)
 			//  fallback_include_parent : true = if fallback_no_ancestor comes into play then force include_parent to true (v1.1.0)
 			//  fallback_include_parent_siblings : true = if fallback_no_ancestor comes into play then force include_parent_siblings to true (v1.1.0)
 			//  fallback_no_children : true = if looking for a current item, and that item turns out to have no children, fallback to current parent (v1.2.0)
 			//  fallback_nc_include_parent : true = if fallback_no_children comes into play then force include_parent to true (v1.2.0)
 			//  fallback_nc_include_parent_siblings : true = if fallback_no_children comes into play then force include_parent_siblings to true (v1.2.0)
+			//  contains_current : true = the output - both Filtered and any Included items - must contain the current menu item (v2.0.0)
+			//  items : comma-or-space delimited list of item ids
+			//
+			//  _walker (array) : for anything that only the walker can determine and that needs to be communicated back to the widget instance
+			//
 			//$elements is an array of objects, indexed by position within the menu (menu_order),
 			//starting at 1 and incrementing sequentially regardless of parentage (ie. first item is [1],
 			//second item is [2] whether it's at root or subordinate to first item)
-			$cmw['_titles'] = array();
+			$cmw['_walker']['fellback'] = false;
 
-			$find_kids_of = $cmw['filter'];
+			$find_kids_of = $cmw['filter'] > 0;
+			$find_specific_items = $cmw['filter'] < 0; //v2.0.0 //v2.0.1:bug fixed (changed < 1 to < 0)
 			$find_current_item = $find_kids_of && empty( $cmw['filter_item'] );
 			$find_current_parent = $find_kids_of && $cmw['filter_item'] == -1; //v1.1.0
 			$find_current_root = $find_kids_of && $cmw['filter_item'] == -2; //v1.1.0
-			$fallback_to_current_item = $cmw['fallback_no_ancestor'] && ( $find_current_parent || $find_current_root ); //v1.1.0
+			$depth_rel_current = $cmw['depth_rel_current'] && $cmw['depth'] > 0; //v2.0.0
 			//these could change depending on whether a fallback comes into play (v1.1.0)
-			$include_parent = $cmw['include_parent'];
+			$include_parent = $cmw['include_parent'] || $cmw['include_ancestors'];
 			$include_parent_siblings = $cmw['include_parent_siblings'];
 
-			//are we looking for something in particular?...
-			if( $find_kids_of || $cmw['start_level'] > 1 ){
+			$id_field = $this->db_fields['id']; //eg. = 'db_id'
+			$parent_field = $this->db_fields['parent']; //eg. = 'menu_item_parent'
 
-				$id_field = $this->db_fields['id']; //eg. = 'db_id'
-				$parent_field = $this->db_fields['parent']; //eg. = 'menu_item_parent'
+			$structure = array(0 => array(
+				'level' => 0,
+				'ancestors' => array(),
+				'kids' => array(),
+				'element' => -1,
+				'keepCount' => 0
+				));
+			$levels = array(
+				array() //for the artificial level-0
+				); 
+			$allLevels = 9999;
+			$startWithKidsOf = -1;
 
-				//start level applies to the *kids* of a find_kids_of search, not to the parent, so while we
-				//are still looking for the parent, the start_level for a find_kids_of search is actually one
-				//up from cmw['start_level']...
-				$start_level = $find_kids_of ? $cmw['start_level'] - 1 : $cmw['start_level'];
+			foreach( $elements as $i=>$item ){
+				$itemID = $item->$id_field;
+				$parentID = empty( $item->$parent_field ) ? 0 : $item->$parent_field;
 
-				$keep_ids = array();
-				$keep_items = array();
-				$temp = array(0 => array('kids' => array()));
-				foreach( $elements as $i=>$item ){
-					if( empty( $item->$parent_field ) ){
-						//set root level of menu, and no ancestors...
-						$temp[ $item->$id_field ] = array(
-							'level' => 1,
-							//this is an array of indexes into $elements...
-							'breadcrumb' => array( $i ),
-							'parent' => 0,
-							'kids' => array()
-							);
-						$temp[0]['kids'][] = $i;
-					}elseif( isset( $temp[ $item->$parent_field ] ) ){
-						//set one greater than parent's level, and ancestors are parent's ancestors plus the parent...
-						$temp[ $item->$id_field ] = array(
-							'level' => $temp[ $item->$parent_field ]['level'] + 1,
-							'breadcrumb' => $temp[ $item->$parent_field ]['breadcrumb'],
-							'parent' => $item->$parent_field,
-							'kids' => array()
-							);
-						$temp[ $item->$id_field ]['breadcrumb'][] = $i;
-						$temp[ $item->$parent_field ]['kids'][] = $i;
+
+				//if $structure[] hasn't been set then it's an orphan; in order to keep orphans, max_depth must be 0 (ie. unlimited)
+				//note that if a child is an orphan then all descendants of that child are also considered to be orphans!
+				//also note that orphans (in the original menu) are ignored by this widget!
+				if( isset( $structure[ $parentID ] ) ){
+					//keep track of current item (as a structure key)...
+					if( $item->current && empty( $currentItem ) ){
+						$currentItem = $itemID;
 					}
-					//if $temp[] hasn't been set then it's an orphan; in order to keep orphans, max_depth must be 0 (ie. unlimited)
-					//note that if a child is an orphan then all descendants of that child are also considered to be orphans!
-					//also note that orphans (in the original menu) are ignored by this widget!
-
-					if( isset( $temp[ $item->$id_field ] ) ){
-						//let's keep track of current menu item (as index into $elements)...
-						if( $item->current ){
-							$ci_index = $i;
-						}
-						//are we at or below the start level?...
-						if( $temp[ $item->$id_field ]['level'] >= $start_level ){
-							//are we still looking for a starting point?...
-							if( empty( $keep_ids ) ){
-								if( //...we're looking for unspecific items starting at this level...
-										!$find_kids_of ||
-										//...we're looking for current item, and this is it...
-										( $find_current_item && $item->current ) ||
-										//...we're looking for current parent, and this is it...
-										( $find_current_parent && $item->current_item_parent ) ||
-										//...we're looking for a current root ancestor, and this is one...
-										( $find_current_root && $item->current_item_ancestor ) ||
-										//...we've got a fallback for a top-level current item with no ancestor...
-										( $fallback_to_current_item && $item->current && $temp[ $item->$id_field ]['level'] == 1 ) ||
-										//...we're looking for a particular menu item, and this is it...
-										( $cmw['filter_item'] == $item->$id_field )
-										){
-									//NOTE : at this point I'm *keeping* the id of the parent of a find_kids_of search, but not the actual item!
-									$keep_ids[] = $item->$id_field;
-									if( !$find_kids_of ){
-										$keep_items[] = $item;
-									}
-									//v1.1.0 if this was the fallback_no_ancestor option, we may need to update $include_parent[_siblings]...
-									if( $fallback_to_current_item && $item->current && $temp[ $item->$id_field ]['level'] == 1 ){
-										$include_parent = $include_parent || $cmw['fallback_include_parent'];
-										$include_parent_siblings = $include_parent_siblings || $cmw['fallback_include_parent_siblings'];
-									}
-									//depth, if set, kicks in at this point :
-									//  if doing a find_kids_of search then this level counts as 0, and the next level (the kids) counts as 1
-									//  otherwise, the current level counts as 1
-									if( $cmw['depth'] > 0 ){
-										$max_level = $temp[ $item->$id_field ]['level'] + $cmw['depth'] - ($find_kids_of ? 0 : 1);
-									}else{
-										//unlimited...
-										$max_level = 9999;
-									}
-									//...and reset start level...
-									$start_level = $cmw['start_level'];
-								}
-							//having found at least one, any more have to be:
-							// - within max_depth of the first one found, and
-							// - either it's an unspecific search, or we have the parent already
-							}elseif( $temp[ $item->$id_field ]['level'] <= $max_level && ( !$find_kids_of || in_array( $item->$parent_field, $keep_ids ) ) ){
-								$keep_ids[] = $item->$id_field;
-								$keep_items[] = $item;
-							}
-						}
+					//this level...
+					$thisLevel = $structure[ $parentID ]['level'] + 1;
+					if( empty( $levels[ $thisLevel ] ) ){
+						$levels[ $thisLevel ] = array();
 					}
-				} //end foreach
+					$levels[ $thisLevel ][] = $itemID;
 
-				//v1.2.0 do we need to invoke the fallback for a childless 'children of current item'?...
-				//note that this is slightly different to the no_ancestor fallback, in that we are treating it like a switch from current item
-				//to current parent, *except* that here the fallback for not having an ancestor is to pretend there's a level-0 ancestor (above
-				//root); obviously it (the level-0 ancestor) will no item of its own, which means the kids now have no (real) parent
-				if( $find_current_item && $cmw['fallback_no_children'] && empty( $keep_items ) && !empty( $keep_ids ) ){
-					//what are the options?
-					// - the current item & its siblings
-					// - ... optionally plus its parent (if there is one)
-					// - ... optionally plus its parent (if there is one) and the parent's siblings
-					//keep_ids[0] is the id of the current item; put the parent's kids into keep_items...
-					foreach( $temp[ $temp[ $keep_ids[0] ]['parent'] ]['kids'] as $item ){
-						$keep_items[] = $item;
-					}
-					$include_parent = $include_parent || $cmw['fallback_nc_include_parent'];
-					$include_parent_siblings = $include_parent_siblings || $cmw['fallback_nc_include_parent_siblings'];
+					$structure[ $itemID ] = array(
+						//level within structure...
+						'level' => $thisLevel,
+						//ancestors (from the artificial level-0, right down to parent, inclusive) within structure...
+						'ancestors' => $structure[ $parentID ]['ancestors'],
+						//kids within structure, ie array of itemID's...
+						'kids' => array(),
+						//item within elements...
+						'element' => $i,
+						//assume no matches...
+						'keep' => false
+						);
+					$structure[ $itemID ]['ancestors'][] = $parentID;
+					$structure[ $parentID ]['kids'][] = $itemID;
 				}
+			} //end foreach
 
-				unset( $keep_ids );
-				if( !empty( $keep_items) ){
-
-					//do we need to prepend parent or ancestors?...
-					$breadcrumb = $temp[ $keep_items[0]->$id_field ]['breadcrumb'];
-					//remove the last breadcrumb element, which is the item's own index...
-					array_pop( $breadcrumb );
-					//last element is now the parent (if there is one)
-					$i = $j = count( $breadcrumb );
-
-					//might we want the parent's title as the widget title?...
-					if( $find_kids_of && $cmw['title_from_parent'] && $i > 0 ){
-						$cmw['_titles']['parent'] = apply_filters(
-							'the_title',
-							$elements[ $breadcrumb[ $i - 1 ] ]->title,
-							$elements[ $breadcrumb[ $i - 1 ] ]->ID
-							);
-					}
-					//v1.2.0 might we want the current item's title as the widget title?...
-					//NB: using $ci_index because it's quite possible that the current menu item is not in $keep_items
-					if( !empty( $ci_index ) && $cmw['title_from_current'] ){
-						$cmw['_titles']['current'] = apply_filters(
-							'the_title',
-							$elements[ $ci_index ]->title,
-							$elements[ $ci_index ]->ID
-							);
-					}
-
-					//if we have a parent and we also want all the parent siblings, then we need
-					//to pop the parent off the bottom of temp and either append or prepend the 
-					//kids of the parent's parent onto keep_items...
-					if( $find_kids_of && $i > 0 && $include_parent_siblings ){
-						$siblings = $temp[ $keep_items[0]->$id_field ]['parent'];
-						if( !empty( $siblings ) ){
-							$siblings = $temp[ $temp[ $siblings ]['parent'] ]['kids'];
-						}
-						if( !empty( $siblings ) ){
-							//remove (and store) parent...
-							$j = array_pop( $breadcrumb );
-							$parentAt = -1;
-							//going backwards thru the array, prepend the parent and anything higher in the array than it...
-							for($i = count($siblings) - 1; $i > -1; $i--){
-								if( $parentAt < 0 && $siblings[ $i ] == $j ){
-									$parentAt = $i;
-								}
-								if( $parentAt > -1 ){
-									array_unshift( $keep_items, $elements[ $siblings[ $i ] ]);
-								}
-							}
-							//going forwards thru the array, append anything lower in the array than the parent...
-							for($i = $parentAt + 1; $i < count($siblings); $i++){
-								//anything after parent gets appended; parent and before get prepended...
-								array_push( $keep_items, $elements[ $siblings[ $i ] ]);
-							}
-							$i = $j = count( $breadcrumb );
-							//don't include_parent now because we just have...
-							$include_parent = false;
-						}
-						unset( $siblings );
-					}
-
-					if( $find_kids_of && $i > 0 ){
-						if( $cmw['include_ancestors'] ){
-							$j = 0;
-						}elseif( $include_parent ){
-							--$j;
-						}
-						while( $i > $j ){
-							array_unshift( $keep_items, $elements[ $breadcrumb[ --$i ] ]);
-						}
-					}
-					unset( $breadcrumb );
-				}
-
-				//for each item we're keeping, use the temp array to hold:
-				//  [0] => the level within the new structure (starting at 1), and
-				//  [1] => the number of kids each item has
-				$temp = array();
-				foreach( $keep_items as $item ){
-					if( isset( $temp[ $item->$parent_field ] ) ){
-						$temp[ $item->$id_field ] = array( $temp[ $item->$parent_field ][0] + 1, 0 );
-						$temp[ $item->$parent_field ][1] += 1;
-					}else{
-						$temp[ $item->$id_field ] = array( 1, 0 );
-					}
-				}
-
-				//transfer $keep back into $elements, resetting the index to increment from 1; also add
-				//new classes to indicate level (starting at 1) and whether any item has kids
-				//
-				//note that we have already filtered out real orphans, but we may have introduced top-level
-				//items that would appear to be orphans to the parent::walk() method, so we need to set all
-				//the top-level items to appear as if they are root-level items...
-				$elements = array();
-				$i = 1;
-				foreach( $keep_items as $item ){
-					$item->classes[] = 'cmw-level-' . $temp[ $item->$id_field ][0];
-					if( $temp[ $item->$id_field ][1] > 0 ){
-						$item->classes[] = 'cmw-has-submenu';
-					}
-					if( $temp[ $item->$id_field ][0] == 1 ){
-						//fake as root level item...
-						$item->$parent_field = 0;
-					}
-					$elements[ $i++ ] = $item;
-				}
-				unset( $keep_items, $temp );
-					
-				//since we've done all the depth filtering, set max_depth to unlimited (unless 'flat' was requested!)...
-				if( !$cmw['flat_output'] ){
-					$max_depth = 0;
-				}
-				$elements = apply_filters( 'custom_menu_wizard_walker_items', $elements, $args );
+			//no point doing much more if we need the current item and we haven't found it, or if we're looking for specific items with none given...
+			$continue = true;
+			if( empty( $currentItem ) && ( $find_current_item || $find_current_parent || $find_current_root || $cmw['contains_current'] ) ){
+				$continue = false;
+			}elseif( $find_specific_items && empty( $cmw['items'] ) ){
+				$continue = false;
 			}
-		}
 
-		return empty( $elements ) ? '' : parent::walk($elements, $max_depth, $args);
+			// IMPORTANT : as of v2.0.0, start level has been rationalised so that it acts the same across all filters (except for specific items!). 
+			// Previously ...
+			//   start level for a show-all filter literally started at the specified level and reported all levels until depth was reached.
+			//   however, start level for a kids-of filter specified the level that the *immediate* kids of the selected filter had to be at
+			//   or below. That was consistent for a specific item, current-item and current-parent filter, but for a current-root filter what
+			//   it actually did was test the current item against the start level, not the current item's root ancestor! Inconsistent!
+			//   But regardless of the current-root filter's use of start level, there was still the inconsistency between show-all and
+			//   kids-of usage.
+			// Now (as of v2.0.0) ...
+			//   start level and depth have been changed to definitively be secondary filters to the show-all & kids-of primary filter.
+			//   The primary filter - show-all, or a kids-of - will provide the initial set of items, and the secondary - start level & depth -
+			//   will further refine that set, with start level being an absolute, and depth still being relative to the first item found.
+			//   The sole exception to this is when Depth Relative to Current Menu Item is set, which modifies the calculation of depth (only)
+			//   such that it becomes relative to the level at which the current menu item can be found (but only if it can be found at or
+			//   below start level).
+			// The effects of this change are that previously, filtering for kids of an item that was at level 2, with a start level of 4,
+			// would fail to return any items because the immediate kids (at level 3) were outside the start level. Now, the returned items
+			// will begin with the grand-kids (ie. those at level 4).
+			// Note that neither start level nor depth are applicable to a specific items filter (also new at v2.0.0)!
+			
+			//the kids-of filters...
+			if( $continue && $find_kids_of ){
+				//specific item...
+				if( $cmw['filter_item'] > 0 && isset( $structure[ $cmw['filter_item'] ] ) && !empty( $structure[ $cmw['filter_item'] ]['kids'] ) ){
+					$startWithKidsOf = $cmw['filter_item'];
+				}
+				if( $find_current_item ){
+					if( !empty( $structure[ $currentItem ]['kids'] ) ){
+						$startWithKidsOf = $currentItem;
+					}elseif( $cmw['fallback_no_children'] ){
+						//no kids,  and fallback to current parent is set...
+						//note that there is no "double fallback", so current parent "can" be the artifical zero element (level-0) *if*
+						//     the current item is a singleton( ie. no kids & no ancestors)!
+						$ancestor = array_slice( $structure[ $currentItem ]['ancestors'], -1, 1 );
+						$startWithKidsOf = $ancestor[0]; //can be zero!
+						$include_parent = $include_parent || $cmw['fallback_nc_include_parent'];
+						$include_parent_siblings = $include_parent_siblings || $cmw['fallback_nc_include_parent_siblings'];
+						$cmw['_walker']['fellback'] = 'to-parent';
+					}
+				}elseif( $find_current_parent || $find_current_root ){
+					//as of v2.0.0 the fallback to current item - for current menu items at the top level - is deprecated, but
+					//retained for a while to maintain backward compatibility
+					//if no parent : fall back to current item (if set)...
+					if( $structure[ $currentItem ]['level'] == 1 && $cmw['fallback_no_ancestor'] ){
+						$startWithKidsOf = $currentItem;
+						$include_parent = $include_parent || $cmw['fallback_include_parent'];
+						$include_parent_siblings = $include_parent_siblings || $cmw['fallback_include_parent_siblings'];
+						$cmw['_walker']['fellback'] = 'to-current';
+					}else{
+						//as of v2.0.0, the artificial level-0 counts as parent of a top-level current menu item...
+						if( $find_current_parent ){
+							$ancestor = -1;
+						}elseif( $structure[ $currentItem ]['level'] > 1 ){
+							$ancestor = 1;
+						}else{
+							$ancestor = 0;
+						}
+						$ancestor = array_slice( $structure[ $currentItem ]['ancestors'], $ancestor, 1 );
+						if( !empty( $ancestor ) ){
+							$startWithKidsOf = $ancestor[0]; //as of v2.0.0, this can now be zero!
+						}
+					}
+				}
+			}
+
+			if( $continue ){
+				//right, let's set the keep flags
+				//for specific items, go straight in on the item id (start level and depth do not apply here)...
+				if( $find_specific_items ){
+					foreach( preg_split('/[,\s]+/', $cmw['items'] ) as $itemID ){
+						if( isset( $structure[ $itemID ] ) ){
+							$structure[ $itemID ]['keep'] = true;
+							$structure[0]['keepCount']++;
+						}
+					}
+				//for show-all filter, just use the levels...
+				}elseif( !$find_kids_of ){
+					//prior to v2.0.0, depth was always related to the first item found, and still is *unless* depth_rel_current is set
+					if( $depth_rel_current && !empty( $currentItem ) && $structure[ $currentItem ]['level'] >= $cmw['start_level'] ){
+						$bottomLevel = $structure[ $currentItem ]['level'] + $cmw['depth'] - 1;
+					}else{
+						$bottomLevel = $cmw['depth'] > 0 ? $cmw['start_level'] + $cmw['depth'] - 1 : $allLevels;
+					}
+					for( $i = $cmw['start_level']; isset( $levels[ $i ] ) && $i <= $bottomLevel; $i++ ){
+						foreach( $levels[ $i ] as $itemID ){
+							$structure[ $itemID ]['keep'] = true;
+							$structure[0]['keepCount']++;
+						}
+					}
+				//for kids-of filters, run a recursive through the structure's kids...
+				}elseif( $startWithKidsOf > -1 ){
+					//prior to v2.0.0, depth was always related to the first item found, and still is *unless* depth_rel_current is set
+					//NB the in_array() of ancestors prevents depth_rel_current when startWithKidsOf == currentItem
+					if( $depth_rel_current && !empty( $currentItem ) && $structure[ $currentItem ]['level'] >= $cmw['start_level'] 
+							&& in_array( $startWithKidsOf, $structure[ $currentItem ]['ancestors'] ) ){
+						$bottomLevel = $structure[ $currentItem ]['level'] - 1 + $cmw['depth'];
+					}else{
+						$bottomLevel = $cmw['depth'] > 0 
+							? max( $structure[ $startWithKidsOf ]['level'] + $cmw['depth'], $cmw['start_level'] + $cmw['depth'] - 1 ) 
+							: $allLevels;
+					}
+					//$structure[0]['keepCount'] gets incremented in this recursive method...
+					$this->_cmw_set_keep_kids( $structure, $startWithKidsOf, $cmw['start_level'], $bottomLevel );
+				}
+			
+				if( $structure[0]['keepCount'] > 0 ){
+					//we have some items! we now may need to set some more keep flags, depending on the include settings...
+
+					//do we need to include parent, parent siblings, and/or ancestors?...
+					//NB these are not restricted by start_level!
+					if( $find_kids_of && $startWithKidsOf > 0 ){
+						if( $include_parent ){
+							$structure[ $startWithKidsOf ]['keep'] = true;
+							//add the class directly to the elements item...
+							$elements[ $structure[ $startWithKidsOf ]['element'] ]->classes[] = 'cmw-the-included-parent';
+						}
+						if( $include_parent_siblings ){
+							$ancestor = array_slice( $structure[ $startWithKidsOf ]['ancestors'], -1, 1);
+							foreach($structure[ $ancestor[0] ]['kids'] as $itemID ){
+								//may have already been kept by include_parent...
+								if( !$structure[ $itemID ]['keep'] ){
+									$structure[ $itemID ]['keep'] = true;
+									//add the class directly to the elements item...
+									$elements[ $structure[ $itemID ]['element'] ]->classes[] = 'cmw-an-included-parent-sibling';
+								}
+							}
+						}
+						if( $cmw['include_ancestors'] ){
+							foreach( $structure[ $startWithKidsOf ]['ancestors'] as $itemID ){
+								if( $itemID > 0 && !$structure[ $itemID ]['keep'] ){
+									$structure[ $itemID ]['keep'] = true;
+									//add the class directly to the elements item...
+									$elements[ $structure[ $itemID ]['element'] ]->classes[] = 'cmw-an-included-parent-ancestor';
+								}
+							}
+						}
+					}
+				}
+			}
+
+			$substructure = array();
+			//check that (a) we have items, and (b) if we must have current menu item, we've got it...
+			if( $structure[0]['keepCount'] > 0 && ( !$cmw['contains_current'] || $structure[ $currentItem ]['keep'] ) ){
+
+				//might we want the parent's title as the widget title?...
+				if( $find_kids_of && $cmw['title_from_parent'] && $startWithKidsOf > 0 ){
+					$cmw['_walker']['parent_title'] = apply_filters(
+						'the_title',
+						$elements[ $structure[ $startWithKidsOf ]['element'] ]->title,
+						$elements[ $structure[ $startWithKidsOf ]['element'] ]->ID
+						);
+				}
+				//might we want the current item's title as the widget title?...
+				if( !empty( $currentItem ) && $cmw['title_from_current'] ){
+					$cmw['_walker']['current_title'] = apply_filters(
+						'the_title',
+						$elements[ $structure[ $currentItem ]['element'] ]->title,
+						$elements[ $structure[ $currentItem ]['element'] ]->ID
+						);
+				}
+
+				//now we need to gather together all the 'keep' items from structure;
+				//while doing so, we need to set up levels and kids, ready for adding classes...
+				foreach( $structure as $k=>$v ){
+					if( $v['keep'] ){
+						$substructure[ $k ] = $v;
+						//take a copy of the elements item...
+						$substructure[ $k ]['element'] = $elements[ $v['element'] ];
+						//use kids as a has-submenu flag...
+						$substructure[ $k ]['kids'] = 0;
+						//any surviving parent (except the artificial level-0) should have submenu class set on it...
+						array_shift( $v['ancestors'] ); //remove the level-0
+						for( $i = count( $v['ancestors'] ) - 1; $i >= 0; $i-- ){
+							if( $substructure[ $v['ancestors'][ $i ] ]['keep'] ){
+								$substructure[ $v['ancestors'][ $i ] ]['kids']++;
+							}else{
+								//not a 'kept' ancestor so remove it...
+								array_splice( $v['ancestors'], $i, 1 );
+							}
+						}
+						//ancestors now only has 'kept' ancestors...
+						$substructure[ $k ]['level'] = count( $v['ancestors'] ) + 1;
+						//need to ensure that the parent_field of all the new top-level (ie. root) items is set to
+						//zero, otherwise the parent::walk() will assume they're orphans and ignore them.
+						//however, we also need to check - especially for a specific-items filter (v2.0.0) - that parent_field of a 
+						//child actually points to the closest 'kept' ancestor; otherwise, given A (kept) > B (not kept) > C (kept)
+						//the parent_field of C would point to a non-existent B and would subsequently be considered an orphan!
+						if( $substructure[ $k ]['level'] == 1){
+							$substructure[ $k ]['element']->$parent_field = 0;
+						}else{
+							//NB even though this really only needs to be done for $find_specific_items, I'm doing it regardless.
+							//set to the closest ancestor, ie. the new(?) parent...
+							$ancestor = array_slice( $v['ancestors'], -1, 1 );
+							$substructure[ $k ]['element']->$parent_field = $ancestor[0];
+						}
+					}
+				}
+			}
+
+			//put substructure's elements back into $elements (remember that it's a 1-based array!)...
+			$elements = array();
+			$i = 1;
+			foreach( $substructure as $k=>$v ){
+				$elements[ $i ] = $v['element'];
+				//add the submenu class?...
+				if( $v['kids'] > 0 ){
+					$elements[ $i ]->classes[] = 'cmw-has-submenu';
+				}
+				//add the level class...
+				$elements[ $i ]->classes[] = 'cmw-level-' . $v['level'];
+				$i++;
+			}
+			unset( $structure, $substructure );
+
+			//since we've done all the depth filtering, set max_depth to unlimited (unless 'flat' was requested!)...
+			if( !$cmw['flat_output'] ){
+				$max_depth = 0;
+			}
+		} //ends the check for bad max depth, empty elements, or empty cmw args
+
+		return empty( $elements ) ? '' : parent::walk( apply_filters( 'custom_menu_wizard_walker_items', $elements, $args ), $max_depth, $args );
 	}
 
-}
+	/**
+	 * recursively set the keep flag if within specified level/depth
+	 */
+	function _cmw_set_keep_kids( &$structure, $itemId, $topLevel, $bottomLevel ){
+		$ct = count( $structure[ $itemId ]['kids'] );
+		for( $i = 0; $i < $ct; $i++ ){
+			$j = $structure[ $itemId ]['kids'][ $i ];
+			if( $structure[ $j ]['level'] <= $bottomLevel ){
+				$structure[ $j ]['keep'] = $structure[ $j ]['level'] >= $topLevel;
+				if( $structure[ $j ]['keep'] ){
+					$structure[0]['keepCount']++;
+				}
+			}
+			if( $structure[ $j ]['level'] < $bottomLevel ){
+				$this->_cmw_set_keep_kids( $structure, $j, $topLevel, $bottomLevel );
+			}
+		}
+	}
+
+} //end Custom_Menu_Wizard_Walker class
 
 /**
  * Custom Menu Wizard Widget class
@@ -365,33 +558,35 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
  class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 	var $_cmw_switches = array(
-		'hide_title',
-		'filter', //v1.1.0 changed from integer
-		'fallback_no_ancestor', //v1.1.0 added
-		'fallback_include_parent', //v1.1.0 added
-		'fallback_include_parent_siblings', //v1.1.0 added
-		'fallback_no_children', //v1.2.0 added
-		'fallback_nc_include_parent', //v1.2.0 added
-		'fallback_nc_include_parent_siblings', //v1.2.0 added
-		'flat_output',
-		'include_parent',
-		'include_parent_siblings', //v1.1.0 added
-		'include_ancestors',
-		'hide_empty', //v1.1.0: this now only has relevance prior to WP v3.6
-		'title_from_parent',
-		'title_from_current', //v1.2.0 added
-		'ol_root',
-		'ol_sub',
+		'hide_title' => 0,
+		'contains_current' => 0, //v2.0.0 added
+		'depth_rel_current' => 0, //v2.0.0 added
+		'fallback_no_ancestor' => 0, //v1.1.0 added
+		'fallback_include_parent' => 0, //v1.1.0 added
+		'fallback_include_parent_siblings' => 0, //v1.1.0 added
+		'fallback_no_children' => 0, //v1.2.0 added
+		'fallback_nc_include_parent' => 0, //v1.2.0 added
+		'fallback_nc_include_parent_siblings' => 0, //v1.2.0 added
+		'flat_output' => 0,
+		'include_parent' => 0,
+		'include_parent_siblings' => 0, //v1.1.0 added
+		'include_ancestors' => 0,
+		'hide_empty' => 0, //v1.1.0: this now only has relevance prior to WP v3.6
+		'title_from_parent' => 0,
+		'title_from_current' => 0, //v1.2.0 added
+		'ol_root' => 0,
+		'ol_sub' => 0,
 		//field section toggles...
-		'fs_filter',
-		'fs_fallbacks', //v1.2.0 added
-		'fs_output',
-		'fs_container',
-		'fs_classes',
-		'fs_links'
+		'fs_filter' => 0,
+		'fs_fallbacks' => 1, //v1.2.0 added
+		'fs_output' => 1,
+		'fs_container' => 1,
+		'fs_classes' => 1,
+		'fs_links' => 1
 		);
 	var $_cmw_strings = array(
 		'title' => '',
+		'items' => '', //v2.0.0 added
 		'container' => 'div',
 		'container_id' => '',
 		'container_class' => '',
@@ -406,10 +601,14 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		);
 	var $_cmw_integers = array(
 		'depth' => 0,
+		'filter' => -1, //v2.0.0 changed from switch
 		'filter_item' => -2, //v1.1.0 changed from 0
 		'menu' => 0,
 		'start_level' => 1
 		);
+
+	//v1.2.1 holds information determined by the walker...
+	var $_cmw_walker = array();
 
 	/**
 	 * class constructor
@@ -426,18 +625,17 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	}
 
 	/**
-	 * removes itself from the filters and, if available, stores current|parent title in the widget instance
+	 * v1.2.1 stores any walker-determined information back into the widget instance
+	 * gets run by the walker, on the filtered array of menu items, just before running parent::walk()
+	 * only gets run *if* there are menu items found
 	 * 
 	 * @param array $items Filtered menu items
 	 * @param object $args
 	 * @return array Menu items
 	 */
-	function cmw_filter_retain_possible_titles($items, $args){
-		remove_filter('custom_menu_wizard_walker_items', array( $this, 'cmw_filter_retain_parent_title' ), 10, 2);
-		foreach(array('parent', 'current') as $n){
-			if( !empty( $args->_custom_menu_wizard['_titles'][ $n ] ) ){
-				$this->cmw_titles[ $n ] = $args->_custom_menu_wizard['_titles'][ $n ];
-			}
+	function cmw_filter_walker_items($items, $args){
+		if( !empty( $args->_custom_menu_wizard['_walker'] ) ){
+			$this->_cmw_walker = $args->_custom_menu_wizard['_walker'];
 		}
 		return $items;
 	}
@@ -494,7 +692,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 
 		//switches...
 		foreach( $this->_cmw_switches as $k=>$v ){
-			$instance[ $v ] = !empty( $instance[ $v ] );
+			$instance[ $k ] = !empty( $instance[ $k ] );
 		}
 		//integers...
 		foreach( $this->_cmw_integers as $k=>$v ){
@@ -511,8 +709,6 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 
 		//v1.1.0  As of WP v3.6, wp_nav_menu() automatically prevents any HTML output if there are no items...
 		$instance['hide_empty'] = $instance['hide_empty'] && $this->_pre_3point6();
-
-		$this->cmw_titles = array();
 
 		//fetch menu...
 		if( !empty($instance['menu'] ) ){
@@ -534,14 +730,13 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				if( !empty( $instance['container_class'] ) ){
 					$instance['container_class'] = "menu-{$menu->slug}-container {$instance['container_class']}";
 				}
-
-				if( $instance['title_from_parent'] || $instance['title_from_current'] ){
-					add_filter('custom_menu_wizard_walker_items', array( $this, 'cmw_filter_retain_possible_titles' ), 10, 2);
+				
+				$instance['menu_class'] = preg_split( '/\s+/', $instance['menu_class'], -1, PREG_SPLIT_NO_EMPTY );
+				if( $instance['fallback_no_ancestor'] || $instance['fallback_no_children'] ){
+					//v1.2.1 add a cmw-fellback-maybe class to the menu and we'll remove or replace it later...
+					$instance['menu_class'][] = 'cmw-fellback-maybe';
 				}
-
-				if( $instance['hide_empty'] ){
-					add_filter( "wp_nav_menu_{$menu->slug}_items", array( $this, 'cmw_filter_check_for_no_items' ), 65532, 2 );
-				}
+				$instance['menu_class'] = implode( ' ', $instance['menu_class'] );
 
 				$walker = new Custom_Menu_Wizard_Walker;
 				$params = array(
@@ -576,7 +771,12 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 						'ol_sub' => $instance['ol_sub'],
 						'flat_output' => $instance['flat_output'],
 						'start_level' => $instance['start_level'],
-						'depth' => $instance['depth']
+						'depth' => $instance['depth'],
+						'depth_rel_current' => $instance['depth_rel_current'], //v2.0.0
+						'contains_current' => $instance['contains_current'], //v2.0.0
+						'items' => $instance['items'], //v2.0.0
+						//v1.2.1 this is for the walker's use... 
+						'_walker' => array()
 						)
 					);
 				if( $instance['ol_root'] ){
@@ -585,9 +785,16 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				if( !empty( $instance['container_class'] ) ){
 					$params['container_class'] = $instance['container_class'];
 				}
+
+				add_filter('custom_menu_wizard_walker_items', array( $this, 'cmw_filter_walker_items' ), 10, 2);
+				if( $instance['hide_empty'] ){
+					add_filter( "wp_nav_menu_{$menu->slug}_items", array( $this, 'cmw_filter_check_for_no_items' ), 65532, 2 );
+				}
+
 				//NB: wp_nav_menu() is in wp-includes/nav-menu-template.php
 				$out = wp_nav_menu( apply_filters( 'custom_menu_wizard_nav_params', $params ) );
 
+				remove_filter('custom_menu_wizard_walker_items', array( $this, 'cmw_filter_walker_items' ), 10, 2);
 				if( $instance['hide_empty'] ){
 					remove_filter( "wp_nav_menu_{$menu->slug}_items", array( $this, 'cmw_filter_check_for_no_items' ), 65532, 2 );
 				}
@@ -599,15 +806,21 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 					//note that 'parent' is whatever you are getting the children of and therefore doesn't apply to a ShowAll, whereas
 					//'current' is the current menu item (as determined by WP); also note that neither parent nor current actually has
 					//to be present in the results
-					if( $instance['title_from_parent'] && !empty( $this->cmw_titles['parent'] ) ){
-						$title = $this->cmw_titles['parent'];
+					if( $instance['title_from_parent'] && !empty( $this->_cmw_walker['parent_title'] ) ){
+						$title = $this->_cmw_walker['parent_title'];
 					}
-					if( empty( $title ) && $instance['title_from_current'] && !empty( $this->cmw_titles['current'] ) ){
-						$title = $this->cmw_titles['current'];
+					if( empty( $title ) && $instance['title_from_current'] && !empty( $this->_cmw_walker['current_title'] ) ){
+						$title = $this->_cmw_walker['current_title'];
 					}
 					if( empty( $title ) ){
 						$title = $instance['hide_title'] ? '' : $instance['title'];
 					}
+
+					//remove/replace the cmw-fellback-maybe class...
+					$out = str_replace(
+						'cmw-fellback-maybe',
+						empty( $this->_cmw_walker['fellback'] ) ? '' : 'cmw-fellback-' . $this->_cmw_walker['fellback'],
+						$out );
 
 					echo $before_widget;
 					if ( !empty($title) ){
@@ -627,7 +840,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 
 		//switches...
 		foreach( $this->_cmw_switches as $k=>$v ){
-			$instance[ $v ] = empty( $new_instance[ $v ] ) ? 0 : 1;
+			$instance[ $k ] = empty( $new_instance[ $k ] ) ? 0 : 1;
 		}
 		//integers...
 		foreach( $this->_cmw_integers as $k=>$v ){
@@ -641,6 +854,18 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		foreach( $this->_cmw_html as $k=>$v ){
 			$instance[ $k ] = isset( $new_instance[ $k ] ) ? trim( $new_instance[ $k ] ) : $v;
 		}
+		//items special case...
+		if( !empty( $instance['items'] ) ){
+			$sep = preg_match( '/(^\d+$|,)/', $instance['items'] ) > 0 ? ',' : ' ';
+			$a = array();
+			foreach( preg_split('/[,\s]+/', $instance['items'], -1, PREG_SPLIT_NO_EMPTY ) as $v ){
+				$i = intval( $v );
+				if( $i > 0 ){
+					$a[] = $i;
+				}
+			}
+			$instance['items'] = implode( $sep, $a );
+		}
 
 		return $instance;
 	}
@@ -652,7 +877,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 
 		//switches...
 		foreach( $this->_cmw_switches as $k=>$v ){
-			$instance[ $v ] = !empty( $instance[ $v ] );
+			$instance[ $k ] = isset( $instance[ $k ] ) ? !empty( $instance[ $k ] ) : !empty( $v );
 		}
 		//integers...
 		foreach( $this->_cmw_integers as $k=>$v ){
@@ -685,6 +910,16 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			return;
 		}
 
+?>
+	<div class="widget-<?php echo $this->id_base; ?>-onchange"
+			data-cmw-dialog-title='<?php _e('Selected Menu : '); ?>'
+			data-cmw-dialog-prompt='<?php _e('Click an item to toggle &quot;Current Menu Item&quot;'); ?>'
+			data-cmw-dialog-output='<?php _e('Basic Output'); ?>'
+			data-cmw-dialog-fallback='<?php _e('Fallback invoked'); ?>'
+			data-cmw-dialog-trigger='#<?php echo $this->get_field_id('filter_item'); ?>'
+			data-cmw-dialog-id='<?php echo $this->get_field_id('dialog'); ?>'>
+<?php
+
 		/**
 		 * permanently visible section : Title (with Hide) and Menu
 		 */
@@ -701,6 +936,9 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		</p>
 
 		<p>
+			<small class="cmw-toggle-assist">
+				<a class="widget-<?php echo $this->id_base; ?>-toggle-assist" href="#"><?php _e('assist'); ?></a>
+			</small>
 			<label for="<?php echo $this->get_field_id('menu'); ?>"><?php _e('Select Menu:'); ?></label>
 			<select id="<?php echo $this->get_field_id('menu'); ?>"
 					class="widget-<?php echo $this->id_base; ?>-selectmenu widget-<?php echo $this->id_base; ?>-listen"
@@ -723,18 +961,22 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		 */
 		$this->_open_a_field_section($instance, 'Filter', 'fs_filter');
 ?>
-		<small class="alignright" style="line-height:1;"><a href="<?php echo plugins_url('/demo.html', __FILE__); ?>" target="_blank"><?php _e(' demo' ); ?></a></small>
 		<p>
+			<small class="cmw-toggle-assist">
+				<a class="widget-<?php echo $this->id_base; ?>-toggle-assist" href="#"><?php _e('assist'); ?></a>
+			</small>
 			<label>
-				<input id="<?php echo $this->get_field_id('filter'); ?>_0" class="widget-<?php echo $this->id_base; ?>-listen"
-					name="<?php echo $this->get_field_name('filter'); ?>" type="radio" value="0" <?php checked(!$instance['filter']); ?> />
+				<input id="<?php echo $this->get_field_id('filter'); ?>_0"
+					class="widget-<?php echo $this->id_base; ?>-showall widget-<?php echo $this->id_base; ?>-listen"
+					name="<?php echo $this->get_field_name('filter'); ?>" type="radio" value="0" <?php checked($instance['filter'], 0); ?> />
 				<?php _e('Show all'); ?></label>
 			<br /><label>
 				<input id="<?php echo $this->get_field_id('filter'); ?>_1" class="widget-<?php echo $this->id_base; ?>-listen"
-					name="<?php echo $this->get_field_name('filter'); ?>" type="radio" value="1" <?php checked($instance['filter']); ?> />
+					name="<?php echo $this->get_field_name('filter'); ?>" type="radio" value="1" <?php checked($instance['filter'], 1); ?> />
 				<?php _e('Children of:'); ?></label>
-			<select id="<?php echo $this->get_field_id('filter_item'); ?>" class="widget-<?php echo $this->id_base; ?>-listen"
-					style="max-width:100%;" name="<?php echo $this->get_field_name('filter_item'); ?>">
+			<select id="<?php echo $this->get_field_id('filter_item'); ?>"
+					class="widget-<?php echo $this->id_base; ?>-childrenof widget-<?php echo $this->id_base; ?>-listen"
+					name="<?php echo $this->get_field_name('filter_item'); ?>">
 				<option value="0" <?php selected( $instance['filter_item'], 0 ); ?>><?php _e('Current Item'); ?></option>
 				<option value="-2" <?php selected( $instance['filter_item'], -2 ); ?>><?php _e('Current Root Item'); ?></option>
 				<option value="-1" <?php selected( $instance['filter_item'], -1 ); ?>><?php _e('Current Parent Item'); ?></option>
@@ -748,34 +990,68 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		foreach( $menus as $i=>$menu ){
 			//as of v1.2.0 : no items, no optgroup!
 			if( !empty( $menu->_items ) ){
-				//v1.1.0 changed the indents from padding to hyphen-space (for IE!!!! grrrr...)
-				$itemindents = array('0' => 0);
-				$menuOptions[] = '<optgroup label="' . $menu->name . '" data-cmw-optgroup-index="' . $i . '">';
+				$grpdata = array();
+				$itemindents = array( '0' => array( 'level'=>0, 'grpkey'=>'' ) );
+				$menuGrpOpts = array();
 				foreach( $menu->_items as $item ){
 					//exclude orpans!
 					if( isset($itemindents[ $item->menu_item_parent ])){
-						$itemindents[ $item->ID ] = $itemindents[ $item->menu_item_parent ] + 1;
-						$maxlevel = max( $maxlevel, $itemindents[ $item->ID ] );
-						$menuOptions[] = '<option style="padding-left:0.75em;" value="' . $item->ID . '" ' .
+						$title = apply_filters( 'the_title', $item->title, $item->ID );
+						$level = $itemindents[ $item->menu_item_parent ]['level'] + 1;
+						$grpkey = $item->ID . '|' . $title;
+						$grpdata[ $grpkey ] = array();
+						if( !empty( $itemindents[ $item->menu_item_parent ]['grpkey'] )){
+							$grpdata[ $itemindents[ $item->menu_item_parent ]['grpkey'] ][ $grpkey ] = array();
+						}
+
+						$itemindents[ $item->ID ] = array( 'level'=>$level, 'grpkey'=>$grpkey );
+						$maxlevel = max( $maxlevel, $level );
+						//v2.0.0 indents changed to non-breaking spaces...
+						$menuGrpOpts[] = '<option value="' . $item->ID . '" ' .
 							selected( $instance['filter_item'], $item->ID, false ) . '>' .
-							str_repeat('- ', $itemindents[ $item->menu_item_parent ]) . $item->title . '</option>';
+							str_repeat( '&nbsp;', ($level - 1) * 3 ) . $title . '</option>';
 					}
 				}
-				$menuOptions[] = '</optgroup>';
+
+				//the menu had items, but they might all have been orphans?...
+				if( !empty( $menuGrpOpts ) ){
+					foreach( array_reverse( $grpdata ) as $k=>$v ){
+						if( empty( $v ) ){
+							$grpdata[ $k ] = false;
+						}else{
+							foreach( $v as $n=>$j ){
+								$grpdata[ $k ][ $n ] = $grpdata[ $n ];
+								unset( $grpdata[ $n ] );
+							}
+						}
+					}
+					$grpdata = json_encode( $grpdata );
+					$menuOptions[] = '<optgroup label="' . $menu->name . '" data-cmw-optgroup-index="' . $i . '" data-cmw-items="' . esc_attr($grpdata) . '">';
+					$menuOptions[] = implode("\n", $menuGrpOpts);
+					$menuOptions[] = '</optgroup>';
+				}
+				unset( $menuGrpOpts, $grpdata, $itemindents );
 			}
 		}
 		$menuOptions = implode("\n", $menuOptions);
 		echo $menuOptions;
 ?>		
 			</select>
+			<br /><label>
+				<input id="<?php echo $this->get_field_id('filter'); ?>_2" 
+					class="widget-<?php echo $this->id_base; ?>-showspecific widget-<?php echo $this->id_base; ?>-listen"
+					name="<?php echo $this->get_field_name('filter'); ?>" type="radio" value="-1" <?php checked($instance['filter'], -1); ?> />
+				<?php _e('Items:'); ?></label>
+			<input id="<?php echo $this->get_field_id('items'); ?>" class="widget-<?php echo $this->id_base; ?>-setitems"
+				name="<?php echo $this->get_field_name('items'); ?>" type="text" value="<?php echo $instance['items']; ?>" />
+
 			<select id="<?php echo $this->get_field_id('filter_item_ignore'); ?>" disabled="disabled"
-					style="display:none;position:absolute;left:-5000px;top:-5000px;"
-					name="<?php echo $this->get_field_name('filter_item_ignore'); ?>">
+					class='cmw-off-the-page' name="<?php echo $this->get_field_name('filter_item_ignore'); ?>">
 			<?php echo $menuOptions; ?>
 			</select>
 		</p>
 
-		<p>
+		<p class="widget-<?php echo $this->id_base; ?>-disableif-ss">
 			<label for="<?php echo $this->get_field_id('start_level'); ?>"><?php _e('Starting Level:'); ?></label>
 			<select id="<?php echo $this->get_field_id('start_level'); ?>" name="<?php echo $this->get_field_name('start_level'); ?>">
 <?php
@@ -790,7 +1066,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			<br /><small><em><?php _e('Level to start testing items for inclusion'); ?></em></small>
 		</p>
 
-		<p>
+		<p class="widget-<?php echo $this->id_base; ?>-disableif-ss">
 			<label for="<?php echo $this->get_field_id('depth'); ?>"><?php _e('For Depth:'); ?></label>
 			<select id="<?php echo $this->get_field_id('depth'); ?>" name="<?php echo $this->get_field_name('depth'); ?>">
 				<option value="0" <?php selected( $instance['depth'], 0 ); ?>><?php _e('unlimited'); ?></option>
@@ -803,7 +1079,12 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		}
 ?>
 			</select>
-			<br /><small><em><?php _e('Relative to the first Filtered item found'); ?></em></small>
+			<br /><small><em><?php _e('Relative to first Filter item found, <strong>unless</strong>&hellip;'); ?></em></small>
+			<br /><label>
+				<input id="<?php echo $this->get_field_id('depth_rel_current'); ?>"
+					name="<?php echo $this->get_field_name('depth_rel_current'); ?>" type="checkbox" value="1"
+					<?php checked($instance['depth_rel_current']); ?> />
+				<?php _e('Relative to &quot;Current&quot; Item <small><em>(if found)</em></small>'); ?></label>
 		</p>
 <?php $this->_close_a_field_section(); ?>
 
@@ -813,15 +1094,17 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		 */
 		$this->_open_a_field_section($instance, 'Fallbacks', 'fs_fallbacks');
 ?>
-		<small class="alignright" style="line-height:1;"><a href="<?php echo plugins_url('/demo.html', __FILE__); ?>" target="_blank"><?php _e(' demo' ); ?></a></small>
-		<p class="clear widget-<?php echo $this->id_base; ?>-disableifnot-rp" style="line-height:1.3333;">
+		<p class="clear widget-<?php echo $this->id_base; ?>-disableifnot-rp">
+			<small class="cmw-toggle-assist">
+				<a class="widget-<?php echo $this->id_base; ?>-toggle-assist" href="#"><?php _e('assist'); ?></a>
+			</small>
 			<small><strong><?php _e( 'If &quot;Children of&quot; is <em>Current Root / Parent Item</em>, and no ancestor exists' ); ?> :</strong></small>
 			<br /><label>
 				<input id="<?php echo $this->get_field_id('fallback_no_ancestor'); ?>"
 					name="<?php echo $this->get_field_name('fallback_no_ancestor'); ?>" type="checkbox" value="1"
 					<?php checked($instance['fallback_no_ancestor']); ?> />
 				<?php _e('Switch to Current Item, and'); ?></label>
-			<br /><label style="padding-left:1em;">
+			<br /><label class="cmw-pad-left-1">
 				<input id="<?php echo $this->get_field_id('fallback_include_parent'); ?>"
 					name="<?php echo $this->get_field_name('fallback_include_parent'); ?>" type="checkbox" value="1"
 					<?php checked($instance['fallback_include_parent']); ?> />
@@ -830,17 +1113,17 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				<input id="<?php echo $this->get_field_id('fallback_include_parent_siblings'); ?>"
 					name="<?php echo $this->get_field_name('fallback_include_parent_siblings'); ?>" type="checkbox" value="1"
 					<?php checked($instance['fallback_include_parent_siblings']); ?> />
-				<?php _e('&amp; its Siblings'); ?></label>
+				<?php _e('with Siblings'); ?></label>
 		</p>
 
-		<p class="widget-<?php echo $this->id_base; ?>-disableifnot-ci" style="line-height:1.3333;">
+		<p class="widget-<?php echo $this->id_base; ?>-disableifnot-ci">
 			<small><strong><?php _e( 'If &quot;Children of&quot; is <em>Current Item</em>, and current item has no children' ); ?> :</strong></small>
 			<br /><label>
 				<input id="<?php echo $this->get_field_id('fallback_no_children'); ?>"
 					name="<?php echo $this->get_field_name('fallback_no_children'); ?>" type="checkbox" value="1"
 					<?php checked($instance['fallback_no_children']); ?> />
 				<?php _e('Switch to Current Parent Item, and'); ?></label>
-			<br /><label style="padding-left:1em;">
+			<br /><label class="cmw-pad-left-1">
 				<input id="<?php echo $this->get_field_id('fallback_nc_include_parent'); ?>"
 					name="<?php echo $this->get_field_name('fallback_nc_include_parent'); ?>" type="checkbox" value="1"
 					<?php checked($instance['fallback_nc_include_parent']); ?> />
@@ -849,7 +1132,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				<input id="<?php echo $this->get_field_id('fallback_nc_include_parent_siblings'); ?>"
 					name="<?php echo $this->get_field_name('fallback_nc_include_parent_siblings'); ?>" type="checkbox" value="1"
 					<?php checked($instance['fallback_nc_include_parent_siblings']); ?> />
-				<?php _e('&amp; its Siblings'); ?></label>
+				<?php _e('with Siblings'); ?></label>
 		</p>
 
 
@@ -861,8 +1144,10 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		 */
 		$this->_open_a_field_section($instance, 'Output', 'fs_output');
 ?>
-		<small class="alignright" style="line-height:1;"><a href="<?php echo plugins_url('/demo.html', __FILE__); ?>" target="_blank"><?php _e(' demo' ); ?></a></small>
 		<p>
+			<small class="cmw-toggle-assist">
+				<a class="widget-<?php echo $this->id_base; ?>-toggle-assist" href="#"><?php _e('assist'); ?></a>
+			</small>
 			<label>
 				<input id="<?php echo $this->get_field_id('flat_output'); ?>_0" name="<?php echo $this->get_field_name('flat_output'); ?>"
 					type="radio" value="0" <?php checked(!$instance['flat_output']); ?> />
@@ -871,6 +1156,15 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				<input id="<?php echo $this->get_field_id('flat_output'); ?>_1" name="<?php echo $this->get_field_name('flat_output'); ?>"
 					type="radio" value="1" <?php checked($instance['flat_output']); ?> />
 				<?php _e('Flat'); ?></label>
+		</p>
+
+		<p>
+			<label>
+				<input id="<?php echo $this->get_field_id('contains_current'); ?>"
+					name="<?php echo $this->get_field_name('contains_current'); ?>" type="checkbox"
+					value="1" <?php checked($instance['contains_current']); ?> />
+				<?php _e('Must Contain &quot;Current&quot; Item'); ?></label>
+			<br /><small><em><?php _e('Checks both Filtered and Included items'); ?></em></small>
 		</p>
 
 		<p class="widget-<?php echo $this->id_base; ?>-disableif">
@@ -883,7 +1177,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				<input id="<?php echo $this->get_field_id('include_parent_siblings'); ?>"
 					name="<?php echo $this->get_field_name('include_parent_siblings'); ?>" type="checkbox"
 					value="1" <?php checked($instance['include_parent_siblings']); ?> />
-				<?php _e('&amp; its Siblings'); ?></label>
+				<?php _e('with Siblings'); ?></label>
 			<br /><label>
 				<input id="<?php echo $this->get_field_id('include_ancestors'); ?>"
 					name="<?php echo $this->get_field_name('include_ancestors'); ?>" type="checkbox"
@@ -1016,6 +1310,8 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		</p>	
 <?php $this->_close_a_field_section(); ?>
 
+	</div>
+
 <?php
 	} //end form()
 
@@ -1027,16 +1323,14 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param string $fname Field name
 	 */
 	function _open_a_field_section( &$instance, $text, $fname ){
-		// the default is *not* collapsed (field $fname == 0)
-		$collapsed = !empty($instance[$fname]);
 ?>
-<div class="stuffbox widget-<?php echo $this->id_base; ?>-collapsible-fieldset" title="<?php _e( 'Click to show/hide' ); ?>" style="margin:0 0 0.5em;cursor:pointer;">
+<div class="stuffbox widget-<?php echo $this->id_base; ?>-collapsible-fieldset" title="<?php _e( 'Click to show/hide' ); ?>">
 	<input id="<?php echo $this->get_field_id($fname); ?>" class="hidden-field" name="<?php echo $this->get_field_name($fname); ?>"
-		type="checkbox" value="1" <?php checked($collapsed); ?> />
-	<div style="background:transparent url(images/arrows.png) no-repeat 0 <?php echo $collapsed ? '0' : '-36px'; ?>;height:16px; width:16px;float:right;outline:0 none;"></div>
-	<h3 style="font-size:1em;margin:0;padding:2px 0.5em;"><?php _e( $text ); ?></h3>
+		type="checkbox" value="1" <?php checked( $instance[$fname] ); ?> />
+	<div style="background-image:url(images/arrows.png);" class="<?php echo $instance[$fname] ? 'cmw-collapsed-fieldset' : ''; ?>"></div>
+	<h3><?php _e( $text ); ?></h3>
 </div>
-<div class="hide-if-js"<?php echo !$collapsed ? ' style="display:block;"' : ''; ?>>
+<div class="<?php echo $instance[$fname] ? 'cmw-start-fieldset-collapsed' : ''; ?>">
 <?php
 	} //end _open_a_field_section()
 
@@ -1087,22 +1381,25 @@ function custom_menu_wizard_widget_shortcode($atts, $content, $tag){
 	$instance = shortcode_atts( array(
 		'title' => '',
 		'menu' => 0, // menu id, slug or name
-		//determines filter & filter_item...
-		'children_of' => '', // empty = show all; menu item id or title (caseless), or current|current-item|parent|current-parent|root|current-ancestor
+		//determines filter & filter_item ('items' takes precedence over 'children_of' because it's more specific)...
+		'children_of' => '', // empty = show all (dep. on 'items'); menu item id or title (caseless), or current|current-item|parent|current-parent|root|current-ancestor
+		'items' => '', // v2.0.0 empty = show all (dep. on 'children_of'); comma- or space-separated list of menu item ids (start level and depth don't apply)
 		'start_level' => 1,
 		'depth' => 0, // 0 = unlimited
 		//only if children_of is (parent|current-parent|root|current-ancestor); determines fallback_no_ancestor, fallback_include_parent & fallback_include_parent_siblings...
 		'fallback_parent' => 0, // 1 = use current-item; 'parent' = *and* include parent, 'siblings' = *and* include both parent and its siblings
 		//only if children_of is (current|current-item); determines fallback_no_children, fallback_nc_include_parent & fallback_nc_include_parent_siblings...
 		'fallback_current' => 0, // 1 = use current-parent; 'parent' = *and* include parent (if available), 'siblings' = *and* include both parent (if available) and its siblings
-				//switches...
+		//switches...
 		'flat_output' => 0,
+		'contains_current' => 0, // v2.0.0
 		//determines include_parent, include_parent_siblings & include_ancestors...
 		'include' =>'', //comma|space|hyphen separated list of 'parent', 'siblings', 'ancestors'
 		'ol_root' => 0,
 		'ol_sub' => 0,
 		//determines title_from_parent & title_from_current...
 		'title_from' => '', //comma|space|hyphen separated list of 'parent', 'current'
+		'depth_rel_current' => 0, // v2.0.0
 		//strings...
 		'container' => 'div', // a tag : div|nav are WP restrictions, not the widget's; '' =  no container
 		'container_id' => '',
@@ -1140,36 +1437,40 @@ function custom_menu_wizard_widget_shortcode($atts, $content, $tag){
 	unset( $menus );
 
 	if( $ok ){
-		//children_of => filter & filter_item...
-		if( empty( $instance['children_of'] ) ){
-			$instance['children_of'] = '';
-		}
 		$instance['filter'] = $instance['filter_item'] = 0;
-		switch( $instance['children_of'] ){
-			case '':
-				break;
-			case 'root': case 'current-ancestor':
-				--$instance['filter_item']; //ends up as -2
-			case 'parent': case 'current-parent':
-				--$instance['filter_item']; //ends up as -1
-			case 'current': case 'current-item':
-				$instance['filter'] = 1;
-				break;
-			default:
-				$instance['filter'] = 1;
-				$instance['filter_item'] = strtolower( $instance['children_of'] );
-		}
-		unset( $instance['children_of'] );
-		//if filter_item is non-numeric then it could be the title of a menu item, but we need it to be the menu item's id...
-		if( !is_numeric( $instance['filter_item'] ) ){
-			foreach( $items as $item ){
-				$ok = strtolower( $item->title ) == $instance['filter_item'];
-				if( $ok ){
-					$instance['filter_item'] = $item->ID;
+		if( empty( $instance['items'] ) ){
+			//children_of => filter & filter_item...
+			if( empty( $instance['children_of'] ) ){
+				$instance['children_of'] = '';
+			}
+			switch( $instance['children_of'] ){
+				case '':
 					break;
+				case 'root': case 'current-ancestor':
+					--$instance['filter_item']; //ends up as -2
+				case 'parent': case 'current-parent':
+					--$instance['filter_item']; //ends up as -1
+				case 'current': case 'current-item':
+					$instance['filter'] = 1;
+					break;
+				default:
+					$instance['filter'] = 1;
+					$instance['filter_item'] = strtolower( $instance['children_of'] );
+			}
+			//if filter_item is non-numeric then it could be the title of a menu item, but we need it to be the menu item's id...
+			if( !is_numeric( $instance['filter_item'] ) ){
+				foreach( $items as $item ){
+					$ok = strtolower( $item->title ) == $instance['filter_item'];
+					if( $ok ){
+						$instance['filter_item'] = $item->ID;
+						break;
+					}
 				}
 			}
+		}else{
+			$instance['filter'] = -1;
 		}
+		unset( $instance['children_of'] );
 	}
 
 	if( $ok ){
@@ -1242,6 +1543,7 @@ function custom_menu_wizard_widget_shortcode($atts, $content, $tag){
 			$instance['link_before'] = '<' . $instance['wrap_link_text'] . '>';
 			$instance['link_after'] = '</' . $instance['wrap_link_text'] . '>';
 		}
+
 		//handle widget_class here because we have full control over $before_widget...
 		$before_widget_class = array(
 			'widget_custom_menu_wizard',
