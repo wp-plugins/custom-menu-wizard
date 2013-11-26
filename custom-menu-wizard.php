@@ -3,13 +3,16 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 2.0.2
+ * Version: 2.0.3
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 
 /*
+ * v2.0.3 change log:
+ * - fixed bug with missing global when enqueuing scripts and styles for admin page
+ * 
  * v2.0.2 change log:
  * - fixed bug where Include Ancestors was not automatically including the Parent
  * - fixed bug where the "assist" was incorrectly calculating Depth Relative to Current Item when the current menu item was outside the scope of the Filtered items
@@ -56,7 +59,7 @@
  * - moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript
  */
 
-$Custom_Menu_Wizard_Widget_Version = '2.0.2';
+$Custom_Menu_Wizard_Widget_Version = '2.0.3';
 
 /**
  * registers the widget and adds the shortcode
@@ -71,7 +74,7 @@ add_action('widgets_init', 'custom_menu_wizard_register_widget');
  * enqueues script file for the widget admin
  */
 function custom_menu_wizard_widget_admin_script(){
-	global $wp_scripts;
+	global $wp_scripts, $Custom_Menu_Wizard_Widget_Version;
 	wp_enqueue_style('custom-menu-wizard-plugin-styles', plugins_url('/custom-menu-wizard.css', __FILE__), array(), $Custom_Menu_Wizard_Widget_Version);
 	wp_enqueue_script('custom-menu-wizard-plugin-script', plugins_url('/custom-menu-wizard.min.js', __FILE__), array('jquery-ui-dialog'), $Custom_Menu_Wizard_Widget_Version);
 	if( !wp_style_is( 'jquery-ui', 'registered' ) ) {

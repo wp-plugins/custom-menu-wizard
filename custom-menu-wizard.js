@@ -1,5 +1,5 @@
 /* Plugin Name: Custom Menu Wizard
- * Version: 2.0.2
+ * Version: 2.0.3
  * Author: Roger Barrett
  * 
  * Script for controlling this widget's options (in Admin -> Widgets)
