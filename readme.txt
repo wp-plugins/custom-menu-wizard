@@ -2,8 +2,8 @@
 Contributors: wizzud
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,menu level,menu branch
 Requires at least: 3.0.1
-Tested up to: 3.7.1
-Stable tag: 2.0.3
+Tested up to: 3.8
+Stable tag: 2.0.4
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -489,6 +489,16 @@ It was a close call, but since the Output options can extend the final list - an
 
 == Changelog ==
 
+= 2.0.4 =
+
+* bugfix : clearing the container field failed to remove the container from the output
+
+* addition : in the "assist", added automatic selection of the shortcode text when it is clicked
+
+* addition : remove WordPress's menu-item-has-children class (introduced in v3.7) when the filtered item no longer has children
+
+* change : tweaked styles and javascript in admin for WordPress v3.8
+
 = 2.0.3 =
 
 * bugfix : missing global when enqueuing scripts and styles for admin
@@ -578,6 +588,11 @@ It was a close call, but since the Output options can extend the final list - an
 Initial release
 
 == Upgrade Notice ==
+
+= 2.0.4 =
+
+Fixed a bug that prevented the container field being removed, and added removal of the menu-item-has-children class when the filtered item no longer has children.
+The admin widget styling and javascript have been tweaked to accommodate WordPress 3.8.
 
 = 2.0.3 =
 
