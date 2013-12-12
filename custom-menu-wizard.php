@@ -3,13 +3,19 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 2.0.3
+ * Version: 2.0.4
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 
 /*
+ * v2.0.4 change log:
+ * - fixed bug where clearing the container field failed to remove the container from the output
+ * - remove WordPress's menu-item-has-children class (WP v3.7+) when the filtered item no longer has children
+ * - added automatic selection of the shortcode text when it is clicked
+ * - tweaked admin styling and javascript for WordPress v3.8
+ * 
  * v2.0.3 change log:
  * - fixed bug with missing global when enqueuing scripts and styles for admin page
  * 
@@ -59,7 +65,7 @@
  * - moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript
  */
 
-$Custom_Menu_Wizard_Widget_Version = '2.0.3';
+$Custom_Menu_Wizard_Widget_Version = '2.0.4';
 
 /**
  * registers the widget and adds the shortcode
@@ -144,7 +150,7 @@ function custom_menu_wizard_update_message($plugin_data, $r){
 	//show if not empty...
 	if(!empty($readme)){
 ?>
-<div style="font-weight:normal;background-color:#fff0c0;border:1px solid #ff9933;border-radius:0.5em;margin:0.5em;">
+<div style="font-weight:normal;background-color:#fff0c0;border:1px solid #d54e21;border-radius:0.5em;margin:0.1em 0;">
 	<div style="margin:0.5em 0.5em 0.5em 1em;max-height:12em;overflow:auto;">
 		<?php echo $readme; ?>
 	</div>
@@ -515,6 +521,9 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				//add the submenu class?...
 				if( $v['kids'] > 0 ){
 					$elements[ $i ]->classes[] = 'cmw-has-submenu';
+				}else{
+					//3.7 adds a menu-item-has-children class to (original) menu items that have kids : remove it as the item is now childless...
+					$elements[ $i ]->classes = array_diff( $elements[ $i ]->classes, array('menu-item-has-children') );
 				}
 				//add the level class...
 				$elements[ $i ]->classes[] = 'cmw-level-' . $v['level'];
@@ -700,7 +709,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		}
 		//strings...
 		foreach( $this->_cmw_strings as $k=>$v ){
-			$instance[ $k ] = empty( $instance[ $k ] ) ? $v : trim( $instance[ $k ] );
+			$instance[ $k ] = isset( $instance[ $k ] ) ? trim( $instance[ $k ] ) : $v; //bug in 2.0.2 fixed!
 		}
 		//html strings...
 		foreach( $this->_cmw_html as $k=>$v ){
@@ -1310,6 +1319,8 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 		</p>	
 <?php $this->_close_a_field_section(); ?>
 
+		<script type="text/javascript">jQuery(function($){$('#<?php echo $this->get_field_id('menu'); ?>').trigger('change');})</script>
+
 	</div>
 
 <?php
@@ -1328,7 +1339,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	<input id="<?php echo $this->get_field_id($fname); ?>" class="hidden-field" name="<?php echo $this->get_field_name($fname); ?>"
 		type="checkbox" value="1" <?php checked( $instance[$fname] ); ?> />
 	<div style="background-image:url(images/arrows.png);" class="<?php echo $instance[$fname] ? 'cmw-collapsed-fieldset' : ''; ?>"></div>
-	<h3><?php _e( $text ); ?></h3>
+	<h4><?php _e( $text ); ?></h4>
 </div>
 <div class="<?php echo $instance[$fname] ? 'cmw-start-fieldset-collapsed' : ''; ?>">
 <?php

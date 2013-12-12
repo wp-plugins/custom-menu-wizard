@@ -1,5 +1,5 @@
 /* Plugin Name: Custom Menu Wizard
- * Version: 2.0.3
+ * Version: 2.0.4
  * Author: Roger Barrett
  * 
  * Script for controlling this widget's options (in Admin -> Widgets)
@@ -120,6 +120,26 @@ jQuery(function($){
 					return false;
 				},
 				/**
+				 * click handler for the shortcode : selects the text contained in the shortcode's CODE element
+				 * @this {Element} The CODE element
+				 * @param {Object} e Event object
+				 */
+				clickShortcode : function(e){
+					var doc = document,
+							range, selection;
+					if (doc.body.createTextRange){ //ms
+						range = doc.body.createTextRange();
+						range.moveToElementText(this);
+						range.select();
+					}else if(window.getSelection){ //all others
+						selection = window.getSelection();
+						range = doc.createRange();
+						range.selectNodeContents(this);
+						selection.removeAllRanges();
+						selection.addRange(range);
+					}
+				},
+				/**
 				 * creates a new list of menu items and inserts it into the dialog content in place of any previous one
 				 * @param {Object} dialog jQuery object of the dialog
 				 * @param {Object} fm jQuery object of the widget form 
@@ -167,6 +187,7 @@ jQuery(function($){
 							.append( $('<div/>').addClass('cmw-demo-theshortcode').html('<code class="ui-corner-all">[custom_menu_wizard]</code>') );
 						dialog.find('.cmw-demo-themenu').on('click', 'a', assist.clickMenu);
 						dialog.find('.cmw-demo-themenu').on('change', 'input', assist.changeMenu);
+						dialog.find('.cmw-demo-theshortcode').on('click', 'code', assist.clickShortcode);
 						dialog.find('.cmw-demo-theoutput').on('click', 'a', assist.clickOutput);
 						dialog.dialog({autoOpen:false, width:Math.min($(window).width() * 0.8, 600), modal:false});
 					}
@@ -564,46 +585,16 @@ jQuery(function($){
 					dialog.dialog('close');
 				}
 			});
+		})
+		//when a widget is deleted, remove its dialog...
+		.on('click', '.widget-control-remove', function(e){
+			$(this).closest('div.widget').find('.widget-custom-menu-wizard-onchange').each(function(){
+				var dialog = $('#' + $(this).data().cmwDialogId);
+				if(dialog.length){
+					dialog.dialog('destroy');
+					dialog.remove();
+				}
+			});
 		});
 
-	//1. when a widget is opened or saved, trigger change on the filter_item select
-	//2. when a widget is deleted, destroy its dialog
-	//To achieve this I've elected to modify WP's window.wpWidgets object and intercept some of its methods
-	// - for (1), the fixLabels() method, which handily gets called whenever a widget is opened or saved
-	// - for (2), the save() method
-	if(window.wpWidgets){
-		if(window.wpWidgets.fixLabels && !window.wpWidgets._cmw_fixLabels){
-			//save the original...
-			window.wpWidgets._cmw_fixLabels = window.wpWidgets.fixLabels;
-			//replace the original...
-			window.wpWidgets.fixLabels = function(widget){
-				//trigger change on selectmenu...
-				widget.find('.widget-custom-menu-wizard-selectmenu').trigger('change');
-				//run the original...
-				window.wpWidgets._cmw_fixLabels(widget);
-    	};
-    }
-		if(window.wpWidgets.save && !window.wpWidgets._cmw_save){
-			//save the original...
-			window.wpWidgets._cmw_save = window.wpWidgets.save;
-			//replace the original...
-			window.wpWidgets.save = function(widget, del, animate, order){
-				//destroy dialog if deleting the widget...
-				if(del){
-					widget.find('.widget-custom-menu-wizard-onchange').each(function(){
-						var dialog = $('#' + $(this).data().cmwDialogId);
-						if(dialog.length){
-							dialog.dialog('destroy');
-							dialog.remove();
-						}
-					});
-				}
-				//run the original...
-				window.wpWidgets._cmw_save(widget, del, animate, order);
-			};
-		}
-	}else{
-		//one-off fallback...
-		$(dotPrefix + '-selectmenu').trigger('change');
-	}
 });

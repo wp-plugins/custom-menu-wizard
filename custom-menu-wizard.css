@@ -1,17 +1,20 @@
 /**
  * custom-menu-wizard.css
- * Version: 2.0.3
+ * Version: 2.0.4
  */
 /*widget admin style...*/
 /*NB .widget-content class is not present in accessibility mode*/
 .js .widget-content .widget-custom-menu-wizard-onchange .cmw-start-fieldset-collapsed {display:none;}
+.widget-custom-menu-wizard-onchange {margin:0 0 0.5em;}
 .widget-custom-menu-wizard-onchange .cmw-colour-grey {color:#999999;}
 .widget-custom-menu-wizard-onchange .cmw-pad-left-1 {padding-left:1em;}
 .widget-custom-menu-wizard-onchange .cmw-off-the-page {display:none; position:absolute; left:-5000px; top:-5000px;}
 .widget-custom-menu-wizard-onchange .cmw-toggle-assist {float:right; line-height:1; margin-left:1em;}
-.widget-custom-menu-wizard-collapsible-fieldset {margin:0 0 0.5em; cursor:pointer;}
+.widget-custom-menu-wizard-collapsible-fieldset .hidden-field {display:none;}
+.widget-custom-menu-wizard-collapsible-fieldset {margin:0.5em 0 0; cursor:pointer; border-left-width:0; border-right-width:0; border-radius:0; text-align:center; background-color:#ffffff;}
 .widget-custom-menu-wizard-collapsible-fieldset h3 {font-size:1em; margin:0; padding:2px 0.5em;}
-.widget-custom-menu-wizard-collapsible-fieldset div {background-color:#transparent; background-repeat:no-repeat; background-position:0 -36px; height:16px; width:16px; float:right; outline:0 none;}
+.widget-custom-menu-wizard-collapsible-fieldset h4 {font-size:1em; margin:0.75em 0;}
+.widget-custom-menu-wizard-collapsible-fieldset div {background-color:transparent; background-repeat:no-repeat; background-position:0 -36px; height:16px; width:16px; float:right; margin-top:0.75em; outline:0 none;}
 .js .widget-content .widget-custom-menu-wizard-collapsible-fieldset div.cmw-collapsed-fieldset {background-position:0 0;}
 .widget-custom-menu-wizard-disableifnot-rp, .widget-custom-menu-wizard-disableifnot-ci {line-height:1.3333;}
 .widget-custom-menu-wizard-childrenof optgroup option {padding-left:0.75em;}
