@@ -3,13 +3,16 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 2.0.4
+ * Version: 2.0.5
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 
 /*
+ * v2.0.5 change log:
+ * - prevent PHP warnings of Undefined index/offset when building $substructure
+ * 
  * v2.0.4 change log:
  * - fixed bug where clearing the container field failed to remove the container from the output
  * - remove WordPress's menu-item-has-children class (WP v3.7+) when the filtered item no longer has children
@@ -65,7 +68,7 @@
  * - moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript
  */
 
-$Custom_Menu_Wizard_Widget_Version = '2.0.4';
+$Custom_Menu_Wizard_Widget_Version = '2.0.5';
 
 /**
  * registers the widget and adds the shortcode
@@ -478,7 +481,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				//now we need to gather together all the 'keep' items from structure;
 				//while doing so, we need to set up levels and kids, ready for adding classes...
 				foreach( $structure as $k=>$v ){
-					if( $v['keep'] ){
+					if( $k > 0 && $v['keep'] ){
 						$substructure[ $k ] = $v;
 						//take a copy of the elements item...
 						$substructure[ $k ]['element'] = $elements[ $v['element'] ];
@@ -487,7 +490,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 						//any surviving parent (except the artificial level-0) should have submenu class set on it...
 						array_shift( $v['ancestors'] ); //remove the level-0
 						for( $i = count( $v['ancestors'] ) - 1; $i >= 0; $i-- ){
-							if( $substructure[ $v['ancestors'][ $i ] ]['keep'] ){
+							if( isset( $substructure[ $v['ancestors'][ $i ] ] ) ){
 								$substructure[ $v['ancestors'][ $i ] ]['kids']++;
 							}else{
 								//not a 'kept' ancestor so remove it...
