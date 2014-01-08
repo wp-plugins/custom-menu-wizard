@@ -3,7 +3,7 @@ Contributors: wizzud
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,menu level,menu branch
 Requires at least: 3.0.1
 Tested up to: 3.8
-Stable tag: 2.0.4
+Stable tag: 2.0.5
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -26,11 +26,11 @@ Features include:
 * Add/specify custom class(es) for the widget block, the menu container, and the menu itself
 * Modify the link's output with additional HTML around the link's text and/or the link element itself
 * Use Ordered Lists (OL) for the top and/or sub levels instead of Unordered Lists (UL)
-* *As of v1.1.0* : Select a branch based on the ultimate ancestor (root level) of the "current" item
-* *As of v1.2.0* : Shortcode, [custom_menu_wizard], available to run the widget from within content
-* *As of v2.0.0* : Make the output conditional upon the "current" item appearing in the selected/included items
-* *As of v2.0.0* : Specify specific menu items
-* *As of v2.0.0* : Use the widget's interactive "assist" to help with the widget settings or shortcode definition 
+* Select a branch based on the ultimate ancestor (root level) of the "current" item
+* Shortcode, [custom_menu_wizard], available to run the widget from within content
+* Make the output conditional upon the "current" item appearing in the selected/included items
+* Specify specific menu items
+* Use the widget's interactive "assist" to help with the widget settings or shortcode definition 
 
 Documentation for the Widget Options, and the associated Shortcode Parameters, can be found under 
 [Other Notes](http://wordpress.org/plugins/custom-menu-wizard/other_notes/).
@@ -489,6 +489,10 @@ It was a close call, but since the Output options can extend the final list - an
 
 == Changelog ==
 
+= 2.0.5 =
+
+* bugfix : prevent PHP warnings of Undefined index/offset
+
 = 2.0.4 =
 
 * bugfix : clearing the container field failed to remove the container from the output
@@ -588,6 +592,10 @@ It was a close call, but since the Output options can extend the final list - an
 Initial release
 
 == Upgrade Notice ==
+
+= 2.0.5 =
+
+Fixed a bug to prevent PHP warnings of Undefined index/offset being output.
 
 = 2.0.4 =
 
