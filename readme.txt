@@ -3,7 +3,7 @@ Contributors: wizzud
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,menu level,menu branch
 Requires at least: 3.0.1
 Tested up to: 3.8
-Stable tag: 2.0.5
+Stable tag: 2.0.6
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -70,7 +70,7 @@ open by default; all sections below that start off collapsed.
         and "Current Parent Item" (v1.1.0) option, followed by all the available items from the menu chosen in `Select Menu`.
         The widget will output the *children* of the selected item, always assuming that they lie within the bounds of any other parameters set.
 
-        * "Current Item" is the menu item that WordPress recognises as being currently on display (current menu item)
+        * "Current Item" is the menu item that WordPress has marked as being currently on display (current menu item)
 
         * "Current Parent Item" (v1.1.0) is the *immediate* ancestor (within `Select Menu`) of the current menu item
 
@@ -489,6 +489,12 @@ It was a close call, but since the Output options can extend the final list - an
 
 == Changelog ==
 
+= 2.0.6 =
+
+* change : modified determination of current item to cope better with multiple occurences (still first-found, but within prioritised groups)
+
+* change : display of the upgrade notice in the plugins list has been replaced with a simple request to read the changelog before upgrading
+
 = 2.0.5 =
 
 * bugfix : prevent PHP warnings of Undefined index/offset
@@ -592,6 +598,11 @@ It was a close call, but since the Output options can extend the final list - an
 Initial release
 
 == Upgrade Notice ==
+
+= 2.0.6 =
+
+Determination of the current menu item has been slightly modified to cope a bit better with occasions where multiple items have been set as "current".
+The display of the upgrade notice in the plugins list has been replaced with a simple request to read the changelog before upgrading.
 
 = 2.0.5 =
 
