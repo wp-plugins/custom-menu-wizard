@@ -3,13 +3,17 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 2.0.5
+ * Version: 2.0.6
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 
 /*
+ * v2.0.6 change log:
+ * - modified determination of current item to cope better with multiple occurences (still first-found, but within prioritised groups)
+ * - replaced display of update information on plugins list with styled request (and link) to read changelog (update info sometimes didn't display, and some considered it "scary" for users)
+ * 
  * v2.0.5 change log:
  * - prevent PHP warnings of Undefined index/offset when building $substructure
  * 
@@ -68,7 +72,7 @@
  * - moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript
  */
 
-$Custom_Menu_Wizard_Widget_Version = '2.0.5';
+$Custom_Menu_Wizard_Widget_Version = '2.0.6';
 
 /**
  * registers the widget and adds the shortcode
@@ -95,71 +99,33 @@ function custom_menu_wizard_widget_admin_script(){
 add_action('admin_print_scripts-widgets.php', 'custom_menu_wizard_widget_admin_script');
 
 /**
- * puts the contents of the Upgrade Notice (from readme.txt) for a new version under the widget's entry in Appearances - Widgets
+ * request read changelog before updating
  */
 function custom_menu_wizard_update_message($plugin_data, $r){
-	global $Custom_Menu_Wizard_Widget_Version;
-	$readme = wp_remote_fopen( 'http://plugins.svn.wordpress.org/custom-menu-wizard/trunk/readme.txt' );
-//	$readme = file_get_contents( plugins_url( '/readme.txt', __FILE__ ) );
-	if(!empty($readme)){
-		//grab the Upgrade Notice section from the readme...
-		if(preg_match('/== upgrade notice ==(.+)(==|$)/ims', $readme, $match) > 0){
-			$readme = $match[1];
-		}else{
-			$readme = '';
-		}
-	}
-	if(!empty($readme)){
-		//if there's a heading for the currently installed version, take anything above it...
-		if(($match = strpos($readme, "= $Custom_Menu_Wizard_Widget_Version =")) !== false){
-			$readme = substr($readme, 0, $match);
-		}
-		//trim it...
-		$readme = trim(str_replace("\r", '', $readme), " \n");
-	}
-	if(!empty($readme)){
-		$readme = preg_replace(
-			array(
-				'/^= (\d+\.\d+\.\d+.*) =/m',    // => /P H4 Upgrade Notice ... /H4 P
-				'/(__|\*\*)!\s?([^*]+!)\1/',    // => STRONG red ... /STRONG
-				'/(__|\*\*)([^*]+)\1/',         // => STRONG ... /STRONG
-				'/\*([^*]+)\*/',                // => EM ... /EM
-				'/`([^`]+)`/',                  // => CODE ... /CODE
-				'/\[([^\]]+)\]\(([^\)]+)\)/',   // => A ... /A
-				'/\n\+\s+/',                    // => SPAN indented bullet
-				'/\n[ \n]*/',                   // => BR
-				//remove breaks that immediately follow/precede a paragraph start/end tag...
-				'/(<p[^>]*>)<br\s\/>/',         // => P
-				'/<br\s\/>(<\/p>)/'             // => /P
-			),
-			array(
-				'</p><h4 style="margin:0;"><em>' . __("Upgrade Notice") . ' $1</em></h4><p style="margin:0.25em 1em;">',
-				'<strong style="color:#cc0000;">$2</strong>',
-				'<strong>$2</strong>',
-				'<em>$1</em>',
-				'<code>$1</code>',
-				'<a href="$2">$1</a>',
-				"\n" . '&nbsp;<span style="margin:0 0.5em;">&bull;</span>',
-				'<br />',
-				'$1',
-				'$1'
-			),
-			//convert html chars...
-			esc_html($readme)
-			);
-		//remove the *first* P end tag...
-		$readme = preg_replace('/<\/p>/', '', $readme . '</p>', 1);
-	}
-	//show if not empty...
-	if(!empty($readme)){
+
+	$url = 'http://wordpress.org/plugins/' . $r->slug. '/changelog/';
+	$style = implode( ';', array(
+		'-webkit-box-sizing:border-box',
+		'-moz-box-sizing:border-box',
+		'box-sizing:border-box',
+		'background-color:#D54E21',
+		'border-radius:2px',
+		'color:#FFFFFF',
+		'display:inline-block',
+		'margin:0',
+		'max-width:100%',
+		'overflow:hidden',
+		'padding:0 0.5em',
+		'text-overflow:ellipsis',
+		'text-shadow:0 1px 0 rgba(0, 0, 0, 0.5)',
+		'vertical-align:text-bottom',
+		'white-space:nowrap'
+		) ) . ';';
+
 ?>
-<div style="font-weight:normal;background-color:#fff0c0;border:1px solid #d54e21;border-radius:0.5em;margin:0.1em 0;">
-	<div style="margin:0.5em 0.5em 0.5em 1em;max-height:12em;overflow:auto;">
-		<?php echo $readme; ?>
-	</div>
-</div>
+ <p style="<?php echo $style; ?>"><em><?php printf( __('Please <a href="%s" style="color:#FFFFFF;text-decoration:underline;" target="_blank">read the Changelog</a> <strong>before</strong> updating!'), $url ); ?></em></p>
 <?php
-	}
+
 }
 /**
  * if the plugin has an update...
@@ -271,6 +237,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				); 
 			$allLevels = 9999;
 			$startWithKidsOf = -1;
+			$currentItem = array();
 
 			foreach( $elements as $i=>$item ){
 				$itemID = $item->$id_field;
@@ -282,9 +249,38 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				//also note that orphans (in the original menu) are ignored by this widget!
 				if( isset( $structure[ $parentID ] ) ){
 					//keep track of current item (as a structure key)...
-					if( $item->current && empty( $currentItem ) ){
-						$currentItem = $itemID;
+					//v2.0.6 change...
+					if( $item->current ){
+						//should(!) never get either parent and/or ancestor on an item marked as "current", but unfortunately it does occur (grrr!).
+						//so this has to cope, not only with more than 1 "current" item, but also with "current" items that are incorrectly marked
+						//as (their own?!) parent and/or ancestor.
+						//we're going to look for correctly (solely) marked "current" items and take the first one found;
+						//failing that, look for a "current" item that is also marked as parent, and, again, use the first one found;
+						//failing that, look for a "current" item that is also marked as an ancestor, and, again, use the first one found.
+						//
+						//array keys, priority order : just current -> parent, not ancestor -> parent and ancestor -> ancestor
+						// first found...
+						// - a001 : just current
+						// - b001 : current & parent (not ancestor)
+						// - c001 : current & parent & ancestor
+						// - d001 : current & ancestor (not parent)
+						// next found...
+						// - a002 : just current
+						// - b002 : current & parent (not ancestor)
+						// - c002 : current & parent & ancestor
+						// - d002 : current & ancestor (not parent)
+						// etc
+						//example : 
+						// - 1st found : current & ancestor = d001
+						// - 2nd found : current & parent & ancestor = c002
+						// - 3rd found : just current = a003
+						// - 4th found : just current & parent = b004
+						// - 5th found : just current = a005
+						//reverse sort keys alphabetically and a003 comes out on bottom, so third found gets used! (copes with 999 "current" items; should be enough!)
+						$j = $item->current_item_ancestor ? ( $item->current_item_parent ? 'c' : 'd') : ( $item->current_item_parent ? 'b' : 'a' );
+						$currentItem[ $j . sprintf( '%03d' , count( $currentItem ) + 1 ) ] = $itemID;
 					}
+
 					//this level...
 					$thisLevel = $structure[ $parentID ]['level'] + 1;
 					if( empty( $levels[ $thisLevel ] ) ){
@@ -308,6 +304,13 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 					$structure[ $parentID ]['kids'][] = $itemID;
 				}
 			} //end foreach
+
+			if( empty( $currentItem ) ){
+				$currentItem = false;
+			}else{
+				krsort( $currentItem );
+				$currentItem = array_pop( $currentItem );
+			}
 
 			//no point doing much more if we need the current item and we haven't found it, or if we're looking for specific items with none given...
 			$continue = true;
