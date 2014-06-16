@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Custom Menu Wizard WP Plugin, v2.1.0 Readme</title>
+<style type="text/css">
+body {font-family: "Lucida Grande", Verdana, sans-serif;}
+code {font-size: 1.3em;}
+div.success {background: #0f0; width: 50%; margin: 0 auto; padding: 1px 10px; border: 3px solid #0d0;}
+div.error {padding: 1px 10px; margin: 30px auto;}
+div.error p {font-weight: bold;}
+div.error ul {list-style: square;}
+div.fatal {background: #faa; border: 3px solid #d00;}
+div.warning {background: #f60; border: 3px solid #e40;}
+div.note {background: #5cf; border: 3px solid #3ad;}
+</style>
+</head>
+<body>
+	<hr />
+
+	<h1>Custom Menu Wizard Widget</h1>
+
+	<p><em>Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.</em></p>
+
+	<hr />
+
+	<p>
+	<strong>Contributors:</strong> wizzud<br />
+	<strong>Donate link:</strong> <br />
+	<strong>Tags:</strong> menu, widget, widgets, navigation, nav, custom menus, custom menu, partial menu, menu level, menu branch<br />
+	<strong>Requires at least:</strong> 3.6<br />
+	<strong>Tested up to:</strong> 3.9<br />
+	<strong>Stable tag:</strong> 2.1.0<br/>
+	<strong>License:</strong> GPLv2 or Later	</p>
+
+	<hr />
+
+		<h3>Description</h3>
+	<p>This plugin is a boosted version of the WordPress "Custom Menu" widget. 
+It provides full control over most of the parameters available when calling WP's <a href="http://codex.wordpress.org/Function_Reference/wp_nav_menu">wp_nav_menu()</a> function, as well as providing pre-filtering of the menu items in order to be able to select a specific portion of the custom menu. It also automatically adds a couple of custom classes. And there is now (v1.2.0) a shortcode that enables you to include the widget's output in your content.</p>
+
+<p>Features include:</p>
+
+<ul>
+<li>Display the entire menu, just a branch of it, or even just a specific level of it</li>
+<li>Select a branch based on a specific menu item, or the "current" item (currently displayed page)</li>
+<li>Specify a level to start at, and the number of levels to output</li>
+<li>Select hierarchicial or flat output, both options still abiding by the specified number of levels to output</li>
+<li>Allow the widget title to be entered but not output, or even to be set from the parent item of a menu's sub-branch</li>
+<li>Optionally disable widget output completely if there are no matching menu items found (WordPress &lt; v3.6)</li>
+<li>Include a sub-branch's parent and/or ancestor item(s) in the output, over and above any start level setting</li>
+<li>Automatically add cmw-level-N and cmw-has-submenu classes to output menu items</li>
+<li>Add/specify custom class(es) for the widget block, the menu container, and the menu itself</li>
+<li>Modify the link's output with additional HTML around the link's text and/or the link element itself</li>
+<li>Use Ordered Lists (OL) for the top and/or sub levels instead of Unordered Lists (UL)</li>
+<li>Select a branch based on the ultimate ancestor (root level) of the "current" item</li>
+<li>Shortcode, [custom_menu_wizard], available to run the widget from within content</li>
+<li>Make the output conditional upon the "current" item appearing in the selected/included items</li>
+<li>Specify specific menu items</li>
+<li>Use the widget's interactive "assist" to help with the widget settings or shortcode definition </li>
+</ul>
+
+<p>Documentation for the <a href='#Widget-Options'>Widget Options</a>, and the associated 
+	<a href='#Shortcode-Parameters'>Shortcode Parameters</a>, can be found under Other Notes.</p>	<hr />
+		<h3>Installation</h3>
+	<ol>
+<li><p>EITHER Upload the zip package via 'Plugins &gt; Add New &gt; Upload' in your WP Admin</p>
+
+<p>OR Extract the zip package and upload <code>custom-menu-wizard</code> folder to the <code>/wp-content/plugins/</code> directory</p></li>
+<li><p>Activate the plugin through the 'Plugins' menu in your WP Admin</p></li>
+</ol>
+
+<p>The widget will now be available in the 'Widgets' admin page. 
+As long as you already have at least one Menu defined, you can add the new widget to a sidebar and configure it however you want. 
+Alternatively, you can use the shortcode in your content.</p>	<hr />
+		<h3>Frequently Asked Questions</h3>
+	<p>If you have a question or problem that is not covered here, please use the integrated Support forum.</p>
+
+<h4>Are there any known problems?</h4>
+
+<p>Yep, 'fraid so :</p>
+
+<ol>
+<li>The widget will only recognise one "current" item (as of v2.0.2, that's the first one encountered; prior to that it was the last one found). It is perfectly possible to have more than one menu item marked as "current", but if CMW has been configured to filter on anything related to a "current menu item" it can only choose one. The simplest example of multiple "current" items is if you add the same page to a menu more than once, but any plugin that adds and/or manipulates menu items, could potentially cause problems for the widget.</li>
+</ol>
+
+<h4>Why isn't it working? Why is there no output?</h4>
+
+<p>I don't know. With all due respect (and a certain amount of confidence in the widget) I would venture to suggest that it is probably due to 
+the option settings on the widget/shortcode. The quickest way to resolve any such issues is to use the widget's interactive "assist", and 
+ensure that you set the current menu item correctly for the page(s) that you are having problems with. However, I am well aware that I not 
+infallible, and if you still have problems then please let me have as much information as possible and I will endeavour to help. (Please 
+note that simply reporting "It doesn't work" is not the most useful of feedbacks, and is unlikely to get a response other than, possibly, 
+a request for more details).</p>
+
+<h4>How do I use the "assist"?</h4>
+
+<p>The widget's interactive "assist" is specific to each widget instance. It is a javascript-driven <em>emulator</em> that uses the widget instance's 
+option settings - including the menu selected - to build a pictorial representation of the menu and show you, in blue, which menu items will 
+be output according to the current option settings. It also shows a very basic output list of those menu items, although it will not apply 
+some of the more advanced HTML-modifying options such as can be found under the Container, Classes or Links sections.
+Any of the displayed menu items can be designated as the "current menu item" simply by clicking on it (click again to deselect, or another 
+item to change). The "current menu item" is shaded red, with its parent shaded orange and ancestors shaded yellow. All changes in the 
+"current menu item" and the widget options are immediately reflected by the "assist" (text fields in the widget options simply need to lose 
+focus).</p>
+
+<p>Once you are happy with the results, having tested all possible settings of "current menu item" (if it applies), then simply Save the widget. 
+Alternatively, simply copy-paste the shortcode code produced by the "assist" straight into your post (you do not need to Save the widget!).
+The widget does not have to Saved to <em>test</em> any of the options.</p>
+
+<h4>Is there an easy way to construct the shortcode to get the results that I want?</h4>
+
+<p>Yes. Use the widget's interactive "assist" capability (see above). Note that you do not need to have the widget in a sidebar : the 
+"assist" also works off a widget that is in the Inactive Widgets area of the widget admin page.</p>
+
+<h4>How do I get the menu item ids for the `Items` option?</h4>
+
+<p>Use the widget's interactive "assist" (see above). Within the representation menu structure, each menu item's id is set in its title 
+attribute, so should be seen when the cursor is moved over the item. A simpler way is to check the <code>Items</code> option : the "assist" will 
+then show a green tick "checkbox" beside each menu item and you simply [un]check the items as required. Each selection will be reflected back into the 
+widget's <code>Items</code> settings, and also in the shortcode code.</p>
+
+<p>Alternatively, go to Appearance, Menus and select the relevant menu; hover over the edit, Remove, or Cancel link for an item and look in 
+the URL (the link's href) for <code>menu-item=NNN</code> ... the NNN is the menu item id.</p>
+
+<h4>How can I find all my posts/pages that have a CMW shortcode so that I can upgrade them?</h4>
+
+<p>There is a button on the widget's "assist" - <code>[...]</code> - that will provide a list of posts that contain any CMW shortcode. 
+Each entry is a link that opens the item in a new tab/window. The link's title gives a bit more information : post type, id, and 
+shortcode(s) concerned. This utility *only* looks at post content; it does not check custom fields, widgets, etc.</p>	<hr />
+
+		<h3>Changelog</h3>
+	<h4>2.1.0</h4>
+
+<ul>
+<li><p>change : <strong>the minmum requirement for WordPress is v3.6</strong></p></li>
+<li><p>bugfix : handle duplicate menu item ids which were causing elements to be ignored</p></li>
+<li><p>bugfix : fix IE8 levels indentation in the "assist"</p></li>
+<li><p>bugfix : the "assist" is now "fixed" position (toggle-able back to absolute), mainly to get around a bug in jQuery UI draggable</p></li>
+<li><p>remove : take out the automatic selection of shortcode text (inconsistent cross-browser, so just triple click as usual; paste-as-text if possible!)</p></li>
+<li><p>addition : in the "assist", provide collapsible options for those larger menus</p></li>
+<li><p>addition : added utility to the "assist" enabling posts containing a CMW shortcode to be located</p></li>
+<li><p>change : in the "assist", swap the menu Items checkboxes for clickable Ticks</p></li>
+<li><p>change : in the "assist", tweak styling and make more responsive to re-sizing</p></li>
+<li><p>change : made compatible with Widget Customizer</p></li>
+<li><p>change : display of the upgrade notice in the plugins list has been replaced with a simple request to read the changelog before upgrading</p></li>
+<li><p>Note : there is no separate release available for this version!</p></li>
+</ul>
+
+<h4>2.0.6</h4>
+
+<ul>
+<li><p>change : modified determination of current item to cope better with multiple occurences (still first-found, but within prioritised groups)</p></li>
+<li><p>change : display of the upgrade notice in the plugins list has been replaced with a simple request to read the changelog before upgrading</p></li>
+</ul>
+
+<h4>2.0.5</h4>
+
+<ul>
+<li>bugfix : prevent PHP warnings of Undefined index/offset</li>
+</ul>
+
+<h4>2.0.4</h4>
+
+<ul>
+<li><p>bugfix : clearing the container field failed to remove the container from the output</p></li>
+<li><p>addition : in the "assist", added automatic selection of the shortcode text when it is clicked</p></li>
+<li><p>addition : remove WordPress's menu-item-has-children class (introduced in v3.7) when the filtered item no longer has children</p></li>
+<li><p>change : tweaked styles and javascript in admin for WordPress v3.8</p></li>
+</ul>
+
+<h4>2.0.3</h4>
+
+<ul>
+<li>bugfix : missing global when enqueuing scripts and styles for admin</li>
+</ul>
+
+<h4>2.0.2</h4>
+
+<ul>
+<li><p>bugfix : the Include Ancestors option was not automatically including the Parent</p></li>
+<li><p>bugfix : the "assist" was incorrectly calculating Depth Relative to Current Item when the current menu item was outside the scope of the Filtered items</p></li>
+<li><p>behaviour change : only recognise the first "current" item found (used to allow subsequent "current" items to override any already encountered)</p></li>
+</ul>
+
+<h4>2.0.1</h4>
+
+<ul>
+<li>bugfix : an incorrect test for a specific-items filter prevented show-all producing any output</li>
+</ul>
+
+<h4>2.0.0</h4>
+
+<ul>
+<li><p><strong>! Possible Breaker !</strong> The calculation of <code>Start Level</code> has been made consistent across the <code>Show all</code> and <code>Children of</code> filters : if you previously had a setup where you were filtering for the children of an item at level 2, with start level set to 4, there would have been no output because the immediate children (at level 3) were outside the start level. Now, there <em>will</em> be output, starting with the grand-children (at level 4).</p></li>
+<li><p><strong>! Possible Breaker !</strong> There is now deemed to be an artificial "root" item above the level 1 items, which mean that a <code>Children of</code> filter set to "Current Parent Item" or "Current Root Item" will no longer fail for a top-level "current menu item". If you have the "no ancestor" fallback set then this change will have no impact (but you may now want to consider turning the fallback off?); if you <em>don't</em> currently use the "no ancestor" fallback, then where there was previously no output there will now be some!</p></li>
+<li><p>added new option : Items, a comma- or space-delimited list of menu item ids, as an alternative Filter</p></li>
+<li><p>added new option : Depth Relative to Current Item to the Filter section (depth_rel_current=1 in the shortcode)</p></li>
+<li><p>added new option : Must Contain Current Item to the Output section (contains_current=1 in the shortcode)</p></li>
+<li><p>changed the widget's "demo" facility to "assist" and brought it into WordPress admin, with full interactivity with the widget</p></li>
+<li><p>refactored code</p></li>
+</ul>
+
+<h4>1.2.2</h4>
+
+<ul>
+<li>bugfix : fallback for Current Item with no children was failing because the parent's children weren't being picked out correctly</li>
+</ul>
+
+<h4>1.2.1</h4>
+
+<ul>
+<li><p>added some extra custom classes, when applicable : cmw-fellback-to-current &amp; cmw-fellback-to-parent (on outer UL/OL) and cmw-the-included-parent, cmw-an-included-parent-sibling &amp; cmw-an-included-ancestor (on relevant LIs)</p></li>
+<li><p>corrected 'show all from start level 1' processing so that custom classes get applied and 'Title from "Current" Item' works (regardless of filter settings)</p></li>
+<li><p>changed the defaults for new widgets such that only the Filter section is open by default; all the others are collapsed</p></li>
+<li><p>in demo.html, added output of the shortcode applicable to the selections made</p></li>
+<li><p>in demo.html, added a link to the documentation page</p></li>
+<li><p>corrected 2 of the shortcode examples in the readme.txt, and made emulator (demo) available from the readme</p></li>
+</ul>
+
+<h4>1.2.0</h4>
+
+<ul>
+<li><p>added custom_menu_wizard shortcode, to run the widget from within content</p></li>
+<li><p>moved the 'no ancestor' fallback into new Fallback collapsible section, and added a fallback for Current Item with no children</p></li>
+<li><p>added an option allowing setting of title from current menu item's title</p></li>
+<li><p>fixed a bug with optgroups/options made available for the 'Children of' selector after the widget has been saved (also affected disabled fields and styling)</p></li>
+<li><p>don't include menus with no items</p></li>
+<li><p>updated demo.html</p></li>
+</ul>
+
+<h4>1.1.0</h4>
+
+<ul>
+<li><p>added 'Current Root Item' and 'Current Parent Item' to the <code>Children of</code> filter</p></li>
+<li><p>added <code>Fallback to Current Item</code> option, with subsidiary options for overriding a couple of Output options, as a means to enable Current Root &amp; Current Parent to match a Current Item at root level</p></li>
+<li><p>added an Output option to include both the parent item <strong>and</strong> the parent's siblings (for a successful <code>Children of</code> filter)</p></li>
+<li><p>added max-width style (100%) to the <code>Children of</code> SELECT in the widget options</p></li>
+<li><p>added widget version to the admin js enqueuer</p></li>
+<li><p>ignore/disable Hide Empty option for WP &gt;= v3.6 (wp_nav_menu() now does it automatically)</p></li>
+<li><p>included a stand-alone helper/demo html page</p></li>
+<li><p>rebuilt the <code>Children of</code> SELECT in the widget options to cope with IE's lack of OPTGROUP/OPTION styling</p></li>
+<li><p>moved the setting of 'disabled' attributes on INPUTs/SELECTs from PHP into javascript</p></li>
+</ul>
+
+<h4>1.0.0</h4>
+
+<p>Initial release</p>	<hr />
+	
+	<h3>Upgrade Notice</h3>
+	<dl>
+		<dt>2.1.0 (incorporated into v3.0.0 release)</dt>
+		<dd>Minimum requirement for WordPress is now v3.6! Added the ability to handle duplicate menu ids, and made the widget compatible with Widget Customizer. Tweaked some styling in the &quot;assist&quot;.
+Please note that there is no separate release package for v2.1.0!</dd>
+		<dt>2.0.5</dt>
+		<dd>Fixed a bug to prevent PHP warnings of Undefined index/offset being output.</dd>
+		<dt>2.0.4</dt>
+		<dd>Fixed a bug that prevented the container field being removed, and added removal of the menu-item-has-children class when the filtered item no longer has children.
+The admin widget styling and javascript have been tweaked to accommodate WordPress 3.8.</dd>
+		<dt>2.0.3</dt>
+		<dd>Fixed a minor bug with a missing global when enqueuing script and style for the admin.</dd>
+		<dt>2.0.2</dt>
+		<dd>Fixed a bug with the Include Ancestors option, where it was not automatically including the Parent.
+Fixed a bug in the &quot;assist&quot;, where it was incorrectly calculating Depth Relative to Current Item when the current menu item was outside the scope of the Filtered items.
+Changed determination</dd>
+		<dt>2.0.1</dt>
+		<dd>Fixed a bug whereby a test for a specific-items filter prevented show-all from producing any output.</dd>
+		<dt>2.0.0</dt>
+		<dd>! Possible Breaker ! My apologies if this affects you, but there are 2 possible scenarios where settings that previously resulted in no output might now produce output : 
++ if you have set a Children of filter, and you have changed the Start Level to a level greater than 2, or
++ if you have set the </dd>
+		<dt>1.2.2</dt>
+		<dd>Bugfix : The fallback for Current Item with no children was failing because the parent&#039;s children weren&#039;t being picked out correctly</dd>
+		<dt>1.2.1</dt>
+		<dd>Added a few extra custom classes, and changed the defaults for new widgets such that only the Filter section is open by default. 
+Fixed Show All processing so that custom classes always get applied, and &#039;Title from &quot;Current&quot; Item&#039; works regardless of filter settings. 
+Fixed a cou</dd>
+		<dt>1.2.0</dt>
+		<dd>Added custom_menu_wizard shortcode, to run the widget from within content.
+Added a new fallback for Current Item having no children, and moved all fallbacks into a collapsible Fallbacks section.
+Fixed a bug with optgroups/options made available for the &#039;Children of&#039; selector after the widg</dd>
+	</dl>
+<hr />
+
+	<h3 id='Widget-Options'>Widget Options</h3>
+<p>There are quite a few options, which makes the widget settings box very long. I have therefore grouped most of the options into
+logical sections and made each section collapsible (with remembered state once saved). As of v1.2.1, only the Filter section is
+open by default; all sections below that start off collapsed.</p>
+
+<ul>
+<li><p><strong>Title</strong></p>
+
+<p>Set the title for your widget.</p></li>
+<li><p><strong>Hide</strong> <em>(checkbox)</em></p>
+
+<p>Prevents the entered <code>Title</code> being displayed in the front-end widget output.</p>
+
+<p>In the Widgets admin page, I find it useful to still be able to see the <code>Title</code> in the sidebar when the widget is collapsed, but I
+don't necessarily want that <code>Title</code> to actually be output when the widget is displayed at the front-end. Hence this checkbox.</p></li>
+<li><p><strong>Select Menu</strong> <em>(select)</em></p>
+
+<p>Choose the appropriate menu from the dropdown list of Custom Menus currently defined in your WordPress application. The
+first one available (alphabetically) is already selected for you by default.</p></li>
+<li><p><strong>Filter</strong></p>
+
+<ul>
+<li><p><strong>Show all</strong> <em>(radio, default)</em></p>
+
+<p>Don't apply the <code>Children of</code> filter. If you check this option, the <code>Children of</code> select will be disabled, as will the <code>Include Parent</code>,
+<code>Include Ancestors</code> and <code>Title from Parent Item</code> checkboxes, as they are only applicable to a <code>Children of</code> filter.</p></li>
+<li><p><strong>Children of</strong> <em>(radio &amp; select)</em></p>
+
+<p>The dropdown list will present a "Current Item" option (default), a "Current Root Item" (v1.1.0)
+and "Current Parent Item" (v1.1.0) option, followed by all the available items from the menu chosen in <code>Select Menu</code>.
+The widget will output the <em>children</em> of the selected item, always assuming that they lie within the bounds of any other parameters set.</p>
+
+<ul>
+<li><p>"Current Item" is the menu item that WordPress recognises as being currently on display (current menu item)</p></li>
+<li><p>"Current Parent Item" (v1.1.0) is the <em>immediate</em> ancestor (within <code>Select Menu</code>) of the current menu item</p></li>
+<li><p>"Current Root Item" (v1.1.0) is the <em>ultimate</em> ancestor (within <code>Select Menu</code>) of the current menu item.</p></li>
+</ul>
+
+<p>Obviously, if the current menu item (as determined by WordPress) does not
+appear in the <code>Select Menu</code> then there is going to be no output for any of these options.</p>
+
+<p>If you change <code>Select Menu</code>, the options presented in this dropdown will change accordingly and the selected option will revert to the default.</p></li>
+<li><p><strong>Items</strong> (radio &amp; text input)* as of v2.0.0</p>
+
+<p>Takes a comma- or space-delimited list of menu item ids, specifiying the specific menu items that are required. This is intended
+for situations that it is not possible to handle using other option settings. The simplest way to determine the menu item ids is
+to use the "assist" facility.</p>
+
+<p>Note that the <code>Starting Level</code> and <code>Depth</code> options (including <code>Relative to "Current" Item</code>) have no effect if <code>Items</code> is set.</p></li>
+<li><p><strong>Starting Level</strong> <em>(select, default: "1")</em></p>
+
+<p>This is the level within the chosen menu (from <code>Select Menu</code>) that the widget will start looking for items to keep. Obviously, level 1
+is the root level (ie. those items that have no parent item); level 2 is all the immediate children of the root level items, and so on.
+Note that for a <code>Children of</code> filter there is no difference between level 1 and level 2 (because there are no children at level 1).
+Also note that this option does not apply if <code>Items</code> is set.</p></li>
+<li><p><strong>For Depth</strong> <em>(select, default: "unlimited")</em></p>
+
+<p>This is the maximum depth of the eventual output structure after filtering, and in the case of <code>Flat</code> output being requested it is
+still applied - as if the output were <code>Hierarchical</code> and then flattened at the very last moment.</p>
+
+<p>You need to be aware that, by default, the
+<code>For Depth</code> setting is applied relative to the level at which the first item to be kept is found. For example, say you were to set
+<code>Children of</code> to "Current Item", <code>Starting Level</code> to "2", and <code>For Depth</code> to "2 levels" : if the current item was found at level 3,
+then you would get the current item's immediate children (from level 4), plus <em>their</em> immediate children (from level 5).
+Note that this option does not apply if <code>Items</code> is set.</p></li>
+<li><p><strong>Relative to "Current" Item</strong> <em>(checkbox)</em> as of v2.0.0</p>
+
+<p>This changes the <code>For Depth</code> option such that depth is applied relative to the current menu item, instead of relative to the
+first item found that is to be kept. It only has any effect when <code>For Depth</code> is set to something other than "unlimited", and when
+the current menu item is within the filtered items (before taking <code>For Depth</code> into account).</p></li>
+</ul></li>
+<li><p><strong>Fallbacks</strong></p>
+
+<p>Fallback for <code>Children of</code> being set to either <em>Current Root Item</em> or <em>Current Parent Item</em>, and current item not having an ancestor:</p>
+
+<ul>
+<li><p><strong>Switch to Current Item</strong> <em>(checkbox)</em> as of v1.1.0</p>
+
+<p>If enabled,
+it provides a fallback of effectively switching the filter to "Current Item" if the current menu item 
+(as determined by WordPress) is at Level 1
+(top level) of the selected menu. For example, say you were to set <code>Children of</code> to "Current Parent Item", with <code>Starting Level</code>
+at "1" and <code>For Depth</code> at "unlimited" : if the current menu item was found at level 1 (root level of the menu) then ordinarily
+there would be no output because the current item has no parent! If you were to enable the <code>Switch to Current Item</code> fallback then you
+<em>would</em> have some output - the entire branch below the current item.</p>
+
+<ul>
+<li><p><strong>Include Parent...</strong> <em>(checkbox)</em> as of v1.1.0</p>
+
+<p>This option extends the <code>Switch to Current Item</code> option (above). If the enabled fallback is actually used, this option can
+temporarily override the equivalent <strong>Output</strong> option to ON. Note that if the <strong>Output</strong> options are already set to include
+the parent item (with or without siblings), this option has absolutely no effect.</p></li>
+<li><p><strong>&amp; its Siblings</strong> <em>(checkbox)</em> as of v1.1.0</p>
+
+<p>This option extends the <code>Switch to Current Item</code> option (above). If the enabled fallback is actually used, this option can
+temporarily override the equivalent <strong>Output</strong> option to ON. Note that if the equivalent <strong>Output</strong> option is already enabled,
+this option has absolutely no effect.</p></li>
+</ul></li>
+</ul>
+
+<p>Fallback for <code>Children of</code> being set to <em>Current Item</em>, and current item not having any children:</p>
+
+<ul>
+<li><p><strong>Switch to Current Parent Item</strong> <em>(checkbox)</em> as of v1.2.0</p>
+
+<p>If enabled, it provides a fallback of effectively switching the filter to "Current Parent Item" if looking for children
+of Current Item and there aren't any. For example, say you were to set <code>Children of</code> to "Current Item", with <code>Starting Level</code>
+at "1" and <code>For Depth</code> at "unlimited" : if the current menu item has no children then ordinarily
+there would be no output! If you were to enable the <code>Switch to Current Item</code> fallback then you
+<em>would</em> have some output - the current item and its siblings.</p>
+
+<p>Please note that there is one difference between this fallback and the normal "Current Parent Item" filter : if the current item
+has no ancestor (as well as no children) then you will always get the current item and its siblings, regardless of any other settings!</p>
+
+<ul>
+<li><p><strong>Include Parent...</strong> <em>(checkbox)</em> as of v1.2.0</p>
+
+<p>This option extends the <code>Switch to Current Parent Item</code> option (above). If the enabled fallback is actually used, this option can
+temporarily override the equivalent <strong>Output</strong> option to ON. Note that if the <strong>Output</strong> options are already set to include
+the parent item (with or without siblings), this option has absolutely no effect.</p></li>
+<li><p><strong>&amp; its Siblings</strong> <em>(checkbox)</em> as of v1.2.0</p>
+
+<p>This option extends the <code>Switch to Current Parent Item</code> option (above). If the enabled fallback is actually used, this option can
+temporarily override the equivalent <strong>Output</strong> option to ON. Note that if the equivalent <strong>Output</strong> option is already enabled,
+this option has absolutely no effect.</p></li>
+</ul></li>
+</ul></li>
+<li><p><strong>Output</strong></p>
+
+<ul>
+<li><p><strong>Hierarchical</strong> <em>(radio, default)</em></p>
+
+<p>Output in the standard nested list format.</p></li>
+<li><p><strong>Flat</strong> <em>(radio)</em></p>
+
+<p>Output in a single list format, ignoring any parent-child relationship other than to maintain the same physical order as would be
+presented in a <code>Hierarchical</code> output.</p></li>
+<li><p><strong>Must Contain "Current" Item</strong> <em>(checkbox)</em> as of v2.0.0</p>
+
+<p>If checked, the widget will not list any menu items unless the current menu item appears somewhere in the list.</p></li>
+<li><p><strong>Include Parent...</strong> <em>(checkbox)</em></p>
+
+<p>If checked, include the parent item in the output. Only applies to a successful <code>Children of</code> filter.</p></li>
+<li><p><strong>&amp; its Siblings</strong> <em>(checkbox)</em> as of v1.1.0</p>
+
+<p>If checked, include the parent item <strong>and</strong> its siblings in the output. Only applies to a successful <code>Children of</code> filter.</p></li>
+<li><p><strong>Include Ancestors</strong> <em>(checkbox)</em></p>
+
+<p>Same as <code>Include Parent</code> except that all ancestors, right back to root level, are included. Only applies to a successful
+<code>Children of</code> filter.</p></li>
+<li><p><strong>Title from Parent</strong> <em>(checkbox)</em></p>
+
+<p>Again, this only applies to a successful <code>Children of</code> filter. If checked, use the title of the parent item as the widget's
+title when displaying the output. This will override (ie. ignore) the <code>Hide</code> checkbox setting!</p>
+
+<p>Please note that this is <strong>not</strong> the same as asking for the title from "the parent of the current menu item"!</p></li>
+<li><p><strong>Title from "Current" Item</strong> <em>(checkbox)</em></p>
+
+<p>If checked, use the title of the current menu item (as determined by WordPress) as the widget's
+title when displaying the output. This will override (ie. ignore) the <code>Hide</code> checkbox setting!</p>
+
+<p>Note that the current menu item is not required to be within the resultant output, merely within the <code>Select Menu</code>.
+Also, <code>Title from Parent</code> (if applicable, and if available) takes priority over this option.</p></li>
+<li><p><strong>Change UL to OL</strong></p>
+
+<p>The standard for menus is to use UL (unordered list) elements to display the output. These settings give you the option to swap
+the ULs out for OLs (ordered lists).</p>
+
+<ul>
+<li><p><strong>Top Level</strong> <em>(checkbox)</em></p>
+
+<p>If checked, swap the outermost UL for an OL.</p></li>
+<li><p><strong>Sub-Levels</strong> <em>(checkbox)</em></p>
+
+<p>If checked, swap any nested (ie. not the outermost) ULs for an OLs.</p></li>
+</ul></li>
+<li><p><strong>Hide Widget if Empty</strong> <em>(checkbox)</em></p>
+
+<p>If checked, the widget will not output <em>any</em> HTML unless it finds at least one menu item that matches the Filter settings.</p>
+
+<p>Please note that as of WordPress v3.6, this option becomes superfluous and will <strong>not</strong> be presented (the wp_nav_menu() function
+has been modified to automatically suppress all HTML output if there are no items to be displayed). The widget will retain
+the setting used on earlier WP versions (in case reversion from WP v3.6 might be required) but <em>will not present the option
+for WP v3.6+</em>.</p></li>
+</ul></li>
+<li><p><strong>Container</strong></p>
+
+<ul>
+<li><p><strong>Element</strong> <em>(default: "div")</em></p>
+
+<p>This menu list is usually wrapped in a "container" element, and this is the tag for that element. You may change it for another
+tag, or you may clear it out and the container will be completely removed. Please note that WordPress is set by default to only
+accept "div" or "nav", but that could be changed or extended by any template or plugin.</p></li>
+<li><p><strong>Unique ID</strong></p>
+
+<p>This allows you to specify your own id (which should be unique) for the container.</p></li>
+<li><p><strong>Class</strong></p>
+
+<p>This allows you to add your own class to the container element.</p></li>
+</ul></li>
+<li><p><strong>Classes</strong></p>
+
+<ul>
+<li><p><strong>Menu Class</strong> <em>(default: "menu-widget")</em></p>
+
+<p>This is the class that will be applied to the list element that holds the entire menu.</p></li>
+<li><p><strong>Widget Class</strong></p>
+
+<p>This allows you to add your own class to the outermost element of the widget, the one that wraps the entire widget output.</p></li>
+</ul></li>
+<li><p><strong>Links</strong></p>
+
+<ul>
+<li><p><strong>Before the Link</strong></p>
+
+<p>Text or HTML that will be placed immediately before each menu item's link.</p></li>
+<li><p><strong>After the Link</strong></p>
+
+<p>Text or HTML that will be placed immediately after each menu item's link.</p></li>
+<li><p><strong>Before the Link Text</strong></p>
+
+<p>Text or HTML that will be placed immediately before each menu item's link text.</p></li>
+<li><p><strong>After the Link Text</strong></p>
+
+<p>Text or HTML that will be placed immediately after each menu item's link text.</p></li>
+</ul></li>
+</ul>
+<hr />
+
+<h3 id='Shortcode-Parameters'>Shortcode Parameters</h3>
+<p>The shortcode is <strong><code>[custom_menu_wizard]</code></strong>. Most of the attributes reflect the options available to the widget, but some have been simplified for easier use in the shortcode format.
+Please note that the <code>Hide Widget if Empty</code> option is not available to the shortcode : it is set to enabled, and if there are no menu items found then there will be no output from the shortcode.</p>
+
+<p>The simplest way to build a shortcode is to use the widget's "assist" facility (new in v2.0.0). The facilty is available even when the widget is in 
+the Inactive Widgets area, so you don't have to add an unwanted instance of the widget to a sidebar.</p>
+
+<ul>
+<li><p><strong>title</strong> <em>(string)</em></p>
+
+<p>The output's <code>Title</code>, which may be overridden by <code>title_from</code>. Note that there is no shortcode equivalent of the widget's <code>Hide</code> option for the title.</p></li>
+<li><p><strong>menu</strong> <em>(string | integer)</em></p>
+
+<p>Accepts a menu name (most likely usage) or id. If not provided, the shortcode will attempt to find the first menu (ordered by name) 
+that has menu items attached to it, and use that.</p></li>
+<li><p><strong>children_of</strong> <em>(string | integer)</em></p>
+
+<p>If not empty then it specifies a <code>Children of</code> filter. If neither <code>children_of</code> nor <code>items</code> are supplied (or are empty) then the 
+filter defaults back to <code>Show all</code> (see above). Note that <code>items</code>, if supplied, will take precedence over <code>children_of</code>.</p>
+
+<ul>
+<li><p>If numeric, it is taken as being the id of a menu item. The widget will look for the <code>Children of</code> that menu item (within <code>menu</code>).
+(Hint : In Menus Admin, hover over the item's <strong>Remove</strong> link and note the number after <em>menu-item=</em> in the URL)</p></li>
+<li><p>Certain specific strings have the following meanings:</p>
+
+<ul>
+<li><p><em>'current'</em> or <em>'current-item'</em> : a <code>Children of</code> "Current Item" filter</p></li>
+<li><p><em>'parent'</em> or <em>'current-parent'</em> : a <code>Children of</code> "Current Parent Item" filter</p></li>
+<li><p><em>'root'</em> or <em>'current-ancestor'</em> : a <code>Children of</code> "Current Root Item" filter</p></li>
+</ul></li>
+<li><p>If any other string, it is taken to be the title of a menu item. The widget will look for the <code>Children of</code> that menu item
+(within <code>menu</code>). Please note that the code looks for a <em>caseless</em> title match, so specifying <code>children_of="my menu item"</code> will
+match against a menu item with the title "My Menu Item". Also note that the first match found (hierarchically) is the one that
+gets used (it is quite possible to have same-named items within a menu structure).</p></li>
+</ul></li>
+<li><p><strong>items</strong> <em>(string)</em> See widget's <code>Items</code> option, under <strong>Filter</strong> above.</p></li>
+<li><p><strong>fallback_parent</strong> <em>(string | integer)</em></p>
+
+<p>This is the fallback option for when <code>Children of</code> is set to either <em>Current Root Item</em> or <em>Current Parent Item</em>, and
+the current item has no ancestors (see <code>Switch to Current Item</code> under <strong>Fallbacks</strong> above).</p>
+
+<ul>
+<li><p>Any "truthy" value (eg. 1, <em>'true'</em>, <em>'on'</em>, <em>'parent'</em>, <em>'siblings'</em>) : Enables widget's <code>Switch to Current Item</code> <strong>Fallbacks</strong> option</p></li>
+<li><p><em>'parent'</em> : Enables widget's <code>Include Parent...</code> <strong>Fallbacks</strong> extension option (in addition to the above)</p></li>
+<li><p><em>'siblings'</em> : Enables widget's <code>&amp; its Siblings</code> <strong>Fallbacks</strong> extension option (in addition to the above)</p></li>
+</ul></li>
+<li><p><strong>fallback_current</strong> <em>(string | integer)</em></p>
+
+<p>This is the fallback option for when <code>Children of</code> is set to <em>Current Item</em>, and
+the current item has no children (see <code>Switch to Current Parent Item</code> under <strong>Fallbacks</strong> above).</p>
+
+<ul>
+<li><p>Any "truthy" value (eg. 1, <em>'true'</em>, <em>'on'</em>, <em>'parent'</em>, <em>'siblings'</em>) : Enables widget's <code>Switch to Current Parent Item</code> <strong>Fallbacks</strong> option</p></li>
+<li><p><em>'parent'</em> : Enables widget's <code>Include Parent...</code> <strong>Fallbacks</strong> extension option (in addition to the above)</p></li>
+<li><p><em>'siblings'</em> : Enables widget's <code>&amp; its Siblings</code> <strong>Fallbacks</strong> extension option (in addition to the above)</p></li>
+</ul></li>
+<li><p><strong>start_level</strong> <em>(integer, default 1)</em> See widget's <code>Starting Level</code> option, under <strong>Filter</strong> above.</p></li>
+<li><p><strong>depth</strong> <em>(integer, default 0)</em> See widget's <code>For Depth</code> option, under <strong>Filter</strong> above.</p></li>
+<li><p><strong>depth_rel_current</strong> <em>(switch, off by default, 1 to enable)</em> See widget's <code>Relative to "Currrent" Item</code> option, under <strong>Filter</strong> above.</p></li>
+<li><p><strong>flat_output</strong> <em>(switch, off by default, 1 to enable)</em> See widget's <code>Flat</code> option, under <strong>Output</strong> above.</p></li>
+<li><p><strong>contains_current</strong> <em>(switch, off by default, 1 to enable)</em> See widget's <code>Must Contain "Current" Item</code> option, under <strong>Output</strong> above.</p></li>
+<li><p><strong>include</strong> <em>(string)</em></p>
+
+<ul>
+<li><p><em>'parent'</em> : Enables widget's <code>Include Parent...</code> <strong>Output</strong> option</p></li>
+<li><p><em>'siblings'</em> : Enables widget's <code>&amp; its Siblings</code> <strong>Output</strong> option</p></li>
+<li><p><em>'ancestors'</em> : Enables widget's <code>Include Ancestors</code> <strong>Output</strong> option</p></li>
+</ul>
+
+<p>Supply more than one by separating them with a comma, space or hyphen, eg. <code>include="siblings ancestors"</code>.</p></li>
+<li><p><strong>title_from</strong> <em>(string)</em></p>
+
+<ul>
+<li><p><em>'parent'</em> : Enables widget's <code>Title from Parent</code> <strong>Output</strong> option</p></li>
+<li><p><em>'current'</em> : Enables widget's <code>Title from "Current" Item</code> <strong>Output</strong> option</p></li>
+</ul>
+
+<p>Supply more than one by separating them with a comma, space or hyphen, eg. <code>title_from="parent,current"</code>.</p></li>
+<li><p><strong>ol_root</strong> <em>(switch, off by default, 1 to enable)</em> See widget's <code>Top Level</code> option, under <strong>Output</strong> above.</p></li>
+<li><p><strong>ol_sub</strong> <em>(switch, off by default, 1 to enable)</em> See widget's <code>Sub-Levels</code> option, under <strong>Output</strong> above.</p></li>
+<li><p><strong>container</strong> <em>(string)</em> See widget's <code>Element</code> option, under <strong>Container</strong> above.</p></li>
+<li><p><strong>container_id</strong> <em>(string)</em> See widget's <code>Unique ID</code> option, under <strong>Container</strong> above.</p></li>
+<li><p><strong>container_class</strong> <em>(string)</em> See widget's <code>Class</code> option, under <strong>Container</strong> above.</p></li>
+<li><p><strong>menu_class</strong> <em>(string)</em> See widget's <code>Menu Class</code> option, under <strong>Classes</strong> above.</p></li>
+<li><p><strong>widget_class</strong> <em>(string)</em> See widget's <code>Widget Class</code> option, under <strong>Classes</strong> above.</p></li>
+<li><p><strong>wrap_link</strong> <em>(string)</em></p>
+
+<p>This is an optional tag name (eg. <em>'div'</em>, <em>'p'</em>, <em>'span'</em>) that, if provided, will be made into HTML start/end tags
+and sent through to the widget as its <code>Before the Link</code> and <code>After the Link</code> options. Please note that the shortcode usage - a simple
+tag name - is much more restrictive than the widget's options, which allow HTML.</p></li>
+<li><p><strong>wrap_link_text</strong> <em>(string)</em></p>
+
+<p>This is an optional tag name (eg. <em>'span'</em>, <em>'em'</em>, <em>'strong'</em>) that, if provided, will be made into HTML start/end tags
+and sent through to the widget as its <code>Before the Link Text</code> and <code>After the Link Text</code> options. Please note that the shortcode usage - a
+simple tag name - is much more restrictive than the widget's options, which allow HTML.</p></li>
+</ul>
+
+<p><strong>Shortcode Examples</strong></p>
+
+<ul>
+<li><p>Show the entire "main" menu :</p>
+
+<p><code>[custom_menu_wizard menu=main]</code></p></li>
+<li><p>Show the children of the Current Item within the "main" menu, for unlimited depth, and include the Current Item's parent :</p>
+
+<p><code>[custom_menu_wizard menu=main children_of=current include=parent]</code></p></li>
+<li><p>From the "animals" menu, show all the items <em>immediately</em> below (depth=1) "Small Dogs", plus "Small Dogs" and its sibling items, as ordered lists :</p>
+
+<p><code>[custom_menu_wizard menu="animals" children_of="small dogs" depth=1 include="siblings" ol_root=1 ol_sub=1]</code></p></li>
+</ul>
+<hr />
+
+</body>
+</html>
