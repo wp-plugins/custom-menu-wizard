@@ -60,7 +60,8 @@ If you like this widget (or if you don't?), please consider taking a moment or t
 [Review](http://wordpress.org/support/view/plugin-reviews/custom-menu-wizard) : it helps others, and gives me valuable feedback.
 
 *Documentation for version 2 of the widget 
-can be found [here](http://plugins.svn.wordpress.org/custom-menu-wizard/tags/3.0.0/v210-readme.html).*
+can be found [here](http://plugins.svn.wordpress.org/custom-menu-wizard/tags/2.0.6/readme.txt)
+or [here](http://www.wizzud.com/v210-readme.html).*
 
 == WIDGET OPTIONS ==
 
