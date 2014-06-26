@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
 Tested up to: 3.9
-Stable tag: 3.0.0
+Stable tag: 3.0.1
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -659,6 +659,10 @@ Note that output from this shortcode extension is restricted to users with edit_
 
 == Changelog ==
 
+= 3.0.1 =
+* bugfix : changed the determination of pre-existing legacy widgets versus brand new widget instances, to get round problems encountered when other plugins utilise the widget_form_callback filter to inject fields into a widget
+* addition : added a couple of filters
+
 = 3.0.0 =
 * **! Rewrite, and Change of Approach !** The widget has had a major rewrite! The `Children of` filter has been replaced with a `Branch` filter, with a subsequent shift in focus for the secondary filter parameters, from the children's level (0, 1 or more items) up to the branch level (a single item!). This should provide a more intuitive interface, and is definitely easier to code for. **However**, it only affects *new instances* of the widget; v2 instances are still ***fully supported***.
 
@@ -757,6 +761,10 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.0.1 =
+Fixed a bug that created new widget instances as legacy version rather than latest; only encountered when other installed plugins inject their own fields into widgets
+Also added a couple of filters.
 
 = 3.0.0 =
 **Rewrite, and change of approach** : __! Important !__ : existing (version 2) widgets and shortcodes *__are fully supported__*. Please [read the Changelog](http://wordpress.org/plugins/custom-menu-wizard/changelog/) *before* upgrading!
