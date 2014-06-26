@@ -3,13 +3,18 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 3.0.0
+ * Version: 3.0.1
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 defined( 'ABSPATH' ) or exit();
 /*
+ * v3.0.1 change log
+ * - fixed bug in determination of pre-existing legacy widgets versus brand new widget instances
+ * - replaced widget property _cmw_allow_legacy_update with a filter, custom_menu_wizard_prevent_legacy_updates : return TRUE to prevent updates of legacy widgets
+ * - added new filter, custom_menu_wizard_wipe_on_update : return TRUE to cleanse an instance of old settings
+ * 
  * v3.0.0 change log
  * - Major rethink/rewrite : the Children Of filter is now a Branch filter, and the selected menu item becomes the key focus point rather 
  *   than its children. The Levels available for a Branch filter now include relative levels as well as absolute levels, and there are more
@@ -112,7 +117,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 	//declare the main plugin class...
 	class Custom_Menu_Wizard_Plugin {
 		
-		public static $version = '3.0.0';
+		public static $version = '3.0.1';
 		protected static $instance;
 		
 		/**

@@ -20,7 +20,6 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				'customizer_support' => true
 			)
 		);
-		$this->_cmw_allow_legacy_update = true;
 		$this->_cmw_legacy_warnreadmore = 'http://wordpress.org/plugins/' . $this->id_base . '/changelog/';
 		//accessibility mode doesn't necessarily mean that javascript is disabled, but if javascript *is* disabled
 		//then accessibility mode *will* be on...
@@ -36,8 +35,25 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 */
 	function form( $instance ) {
 
-		//only call the legacy form method if the widget already exists and doesn't have a version number (old format)...
-		if( !empty( $instance ) && empty( $instance['cmwv'] ) ){
+		//raised June 2014 : problem...
+		//using the widget_form_callback filter (as Widget Title Links plugin does, which raised the issue) it is perfectly
+		//possible for $instance to be non-empty - with any number of properties - for a new widget! The widget_form_callback
+		//filter allows any other plugin to add fields to $instance *before* the actual widget itself gets a chance to (and
+		//returning false from that filter will prevent the widget ever being called, but not relevant here).
+		//(ref: WP_Widget::form_callback() in wp-includes/widgets.php)
+		//this means that I can't rely on a !empty($instance) test being indicative of an existing widget (because it could be
+		//a new widget but filtered with widget_form_callback).
+		//So, I have changed the "legacy" test from 
+		//  if( !empty( $instance ) && empty( $instance['cmwv'] ) ){
+		//to
+		//  if( is_numeric( $this->number ) && $this->number > 0 && empty( $instance['cmwv'] ) ){
+		//(checking for $this->number > 0 is probably overkill but it doesn't hurt)
+		//Note that this could still be circumvented by some other plugin using the widget_form_callback filter to set 'cmwv',
+		//but I can't do anything about that!
+
+		//only call the legacy form method if the widget has a number (ie. this instance has been saved, could be either active
+		// or inactive) and it does *not* have a version number ('cmwv') set in $instance...
+		if( is_numeric( $this->number ) && $this->number > 0 && empty( $instance['cmwv'] ) ){
 			$this->cmw_legacy_form( $instance );
 			return;
 		}
@@ -603,6 +619,8 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	/**
 	 * sanitizes/updates the widget settings sent from the backend admin
 	 * 
+	 * @filters : custom_menu_wizard_wipe_on_update        false
+	 * 
 	 * @param array $new_instance New widget settings
 	 * @param array $old_instance Old widget settings
 	 * @return array Sanitized widget settings
@@ -614,7 +632,12 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			return $this->cmw_legacy_update( $new_instance, $old_instance );
 		}
 
-		return $this->cmw_settings( $new_instance, $old_instance, __FUNCTION__ );
+		return $this->cmw_settings( 
+			$new_instance, 
+			//allow a filter to return true, whereby any previous settings (now possibly unused) will be wiped instead of being allowed to remain...
+			//eg. add_filter( 'custom_menu_wizard_wipe_on_update', [filter_function], 10, 1 ) => true
+			apply_filters( 'custom_menu_wizard_wipe_on_update', false ) ? array() : $old_instance,
+			__FUNCTION__ );
 
 	} //end update()
 
@@ -1430,6 +1453,8 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	/**
 	 * produces the legacy version of the backend admin form(s)
 	 * 
+	 * @filters : custom_menu_wizard_prevent_legacy_updates        false
+	 * 
 	 * @param array $instance Widget settings
 	 */
 	function cmw_legacy_form( $instance ) {
@@ -1476,7 +1501,9 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		<a class="widget-<?php echo $this->id_base; ?>-legacy-close cmw-legacy-close" title="<?php _e('Dismiss'); ?>" href="#">X</a>
 		<em><?php _e('This is an old version of the widget!'); ?>
 <?php
-		if( !$this->_cmw_allow_legacy_update ){
+		//allow a filter to return true, whereby updates to legacy widgets are disallowed...
+		//eg. apply_filter( 'custom_menu_wizard_prevent_legacy_updates', [filter function], 10, 1 ) => true
+		if( apply_filters( 'custom_menu_wizard_prevent_legacy_updates', false ) ){
 ?>
 		<br /><?php _e('Any changes you make will NOT be Saved!'); ?>
 <?php
@@ -1952,14 +1979,24 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	/**
 	 * updates the widget settings sent from the legacy backend admin
 	 * 
+	 * @filters : custom_menu_wizard_prevent_legacy_updates        false
+	 * @filters : custom_menu_wizard_wipe_on_update                false
+	 * 
 	 * @param array $new_instance New widget settings
 	 * @param array $old_instance Old widget settings
 	 * @return array Sanitized widget settings
 	 */
 	function cmw_legacy_update( $new_instance, $old_instance ){
 
-		if( $this->_cmw_allow_legacy_update ){
-			return $this->cmw_legacy_settings( $new_instance, $old_instance, 'update' );
+		//allow a filter to return true, whereby updates to legacy widgets are disallowed...
+		//eg. apply_filter( 'custom_menu_wizard_prevent_legacy_updates', [filter function], 10, 1 ) => true
+		if( !apply_filters( 'custom_menu_wizard_prevent_legacy_updates', false ) ){
+			return $this->cmw_legacy_settings( 
+				$new_instance, 
+				//allow a filter to return true, whereby any previous settings (now possibly unused) will be wiped instead of being allowed to remain...
+				//eg. add_filter( 'custom_menu_wizard_wipe_on_update', [filter_function], 10, 1 ) => true
+				apply_filters( 'custom_menu_wizard_wipe_on_update', false ) ? array() : $old_instance,
+				'update' );
 		}else{
 			//prevent the save!...
 			return false;
