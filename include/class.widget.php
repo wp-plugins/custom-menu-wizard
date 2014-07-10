@@ -603,7 +603,8 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 	<?php $this->cmw_close_a_field_section(); ?>
 		
-	<div class="cmw-shortcode-wrap"><code class="widget-<?php echo $this->id_base; ?>-shortcode ui-corner-all" title="<?php _e('shortcode'); ?>"><?php echo $this->cmw_shortcode( $instance ); ?></code></div>
+	<div class="cmw-shortcode-wrap"><code class="widget-<?php echo $this->id_base; ?>-shortcode ui-corner-all" 
+		title="<?php _e('shortcode'); ?>"><?php echo $this->cmw_shortcode( array_merge( $instance, array( 'menu' => $menus['selectedMenu'] ) ) ); ?></code></div>
 
 </div>
 <?php
@@ -1107,6 +1108,9 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				//reset levels of selected optgroup to be the max levels of any group...
 				$rtn['selectedLevels'] = $rtn['maxlevel'];
 			}
+			//send the currently selected menu id back (may be different from the value when passed
+			//in, if this is a new instance or if a menu set for an existing instance has been deleted)
+			$rtn['selectedMenu'] = $selectedMenu;
 		}
 		return $rtn;
 
