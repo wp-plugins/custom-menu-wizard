@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
 Tested up to: 3.9
-Stable tag: 3.0.1
+Stable tag: 3.0.2
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -160,13 +160,23 @@ Filters are applied in the order they are presented.
 
 * **For Depth** *select*
 
-    This the number of levels of the menu structure that will be considered for inclusion in the final output.
+    This the number of levels of the menu structure that will be considered for inclusion in the final output (in complete
+    ignorance of any subsequent Inclusions or Exclusions).
+    
+    The first level of output is the starting level, regardless of
+    how that starting level is determined (see `Starting at` and `Relative to Current Item` options). So if you ask
+    for a Depth of 1 level, you get just the starting level; if you ask for a Depth of 2, you get the starting level and
+    the one below it.
 
 * **Relative to Current Item** *checkbox*
 
     By default, `For Depth` (above) is relative to the first item found, but this may be overridden to be relative to the
     current menu item ***if***  `For Depth` is not unlimited **and** the current menu item can found within the selected menu.
     If the current menu item is not within the selected menu then it falls back to being relative to the first item found.
+    
+    Please note that the current item must also be within the constraints set by the `Starting at` option. In other words, if
+    current item is *above* the `Starting at` level in the menu structure then it will **not** be used to alter the determination of
+    Depth.
 
 ***Inclusions***
 
@@ -659,6 +669,9 @@ Note that output from this shortcode extension is restricted to users with edit_
 
 == Changelog ==
 
+= 3.0.2 =
+* bugfix : the shortcode display on new instances of the widget (in admin) did not initially reflect the automatically-selected menu
+
 = 3.0.1 =
 * bugfix : changed the determination of pre-existing legacy widgets versus brand new widget instances, to get round problems encountered when other plugins utilise the widget_form_callback filter to inject fields into a widget
 * addition : added a couple of filters
@@ -761,6 +774,9 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.0.2 =
+Fixed a bug where the shortcode displayed on new instances of the widget (in admin) did not initially reflect the automatically-selected menu
 
 = 3.0.1 =
 Fixed a bug that created new widget instances as legacy version rather than latest; only encountered when other installed plugins inject their own fields into widgets

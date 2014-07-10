@@ -3,13 +3,16 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 3.0.1
+ * Version: 3.0.2
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 defined( 'ABSPATH' ) or exit();
 /*
+ * v3.0.2 change log
+ * - fixed bug where the shortcode shown on new instances didn't initially reflect the automatically selected menu
+ * 
  * v3.0.1 change log
  * - fixed bug in determination of pre-existing legacy widgets versus brand new widget instances
  * - replaced widget property _cmw_allow_legacy_update with a filter, custom_menu_wizard_prevent_legacy_updates : return TRUE to prevent updates of legacy widgets
@@ -117,7 +120,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 	//declare the main plugin class...
 	class Custom_Menu_Wizard_Plugin {
 		
-		public static $version = '3.0.1';
+		public static $version = '3.0.2';
 		protected static $instance;
 		
 		/**
@@ -161,7 +164,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 		public function enqueue_scripts(){
 
 			$min = defined( 'WP_DEBUG' ) && WP_DEBUG ? '' : '.min';
-			wp_enqueue_script( 'custom-menu-wizard-plugin-script', plugins_url( "/custom-menu-wizard$min.js", __FILE__ ), array('jquery-ui-dialog'), self::$version );
+			wp_enqueue_script( 'custom-menu-wizard-plugin-script', plugins_url( "/custom-menu-wizard$min.js", __FILE__ ), array('jquery-ui-dialog'), self::$version, true );
 			
 		} //end enqueue_scripts()
 		
