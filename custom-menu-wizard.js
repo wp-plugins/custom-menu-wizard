@@ -1,4 +1,4 @@
-/* Plugin Name: Custom Menu Wizard
+/* Custom Menu Wizard plugin
  * Script for controlling this widget's options (in Admin -> Widgets)
 */
 /*global jQuery, window, document, ajaxurl */
@@ -859,7 +859,7 @@ jQuery(function($){
 				v.push( $.isArray(args[n]) ? n + '="' + args[n].join(',') + '"' : n + '=' + args[n] );
 			}
 			//NB at v3.0.0, the shortcode changed from custom_menu_wizard to cmwizard (the previous version is still supported)
-			return '[cmwizard ' + v.join(' ') + ']';
+			return '[cmwizard ' + v.join(' ') + '/]';
 		}, //end cmwAssist.shortcode()
 		/**
 		 * updates the graphic menu structure from the widget data

@@ -1,6 +1,6 @@
 <?php
 /*
- * Plugin Name: Custom Menu Wizard
+ * Custom Menu Wizard plugin
  *
  * Custom Menu Wizard Walker class
  * NB: Walker_Nav_Menu class is in wp-includes/nav-menu-template.php, and is itself an 
@@ -11,9 +11,9 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	/**
 	 * CMW custom variables
 	 */
-	var $_cmw_tree;
-	var $_cmw_lowest;
-	var $_cmw_highest;
+	private $_cmw_tree;
+	private $_cmw_lowest;
+	private $_cmw_highest;
 
 	/**
 	 * opens a sub-level with a UL or OL start-tag
@@ -21,7 +21,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param string $output Passed by reference. Used to append additional content.
 	 * @param int $depth Depth of page. Used for padding.
 	 */
-	function start_lvl( &$output, $depth = 0, $args = array() ) {
+	public function start_lvl( &$output, $depth = 0, $args = array() ) {
 
 		$indent = str_repeat("\t", $depth);
 		$listtag = empty( $args->_custom_menu_wizard['ol_sub'] ) ? 'ul' : 'ol';
@@ -35,7 +35,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param string $output Passed by reference. Used to append additional content.
 	 * @param int $depth Depth of page. Used for padding.
 	 */
-	function end_lvl( &$output, $depth = 0, $args = array() ) {
+	public function end_lvl( &$output, $depth = 0, $args = array() ) {
 
 		$indent = str_repeat("\t", $depth);
 		$listtag = empty( $args->_custom_menu_wizard['ol_sub'] ) ? 'ul' : 'ol';
@@ -52,7 +52,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param integer $max_depth
 	 * @return string
 	 */
-	function walk($elements, $max_depth){
+	public function walk($elements, $max_depth){
 
 		$args = array_slice(func_get_args(), 2);
 		$args = $args[0];
@@ -83,7 +83,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param array $cmw Array of widget instance settings
 	 * @return integer ID of current menu item (false if not found)
 	 */
-	function _cmw_find_current_item( &$elements, &$cmw ){
+	private function _cmw_find_current_item( &$elements, &$cmw ){
 		//$elements is an array of objects, indexed by position within the menu (menu_order),
 		//starting at 1 and incrementing sequentially regardless of parentage (ie. first item is [1],
 		//second item is [2] whether it's at root or subordinate to first item)
@@ -255,7 +255,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param boolean $andSiblings Whether to check in $lookBelow's siblings as well
 	 * @return boolean Found (or not)
 	 */
-	function _cmw_check_contains_item( $lookBelow, $searchFor, $andSiblings ){
+	private function _cmw_check_contains_item( $lookBelow, $searchFor, $andSiblings ){
 
 		$rtn = in_array( $lookBelow, $this->_cmw_tree[ $searchFor ]['ancestors'] );
 		if( !$rtn && $andSiblings ){
@@ -277,7 +277,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param integer $kid Menu item ID
 	 * @return integer Menu item ID of kid's parent
 	 */
-	function _cmw_get_parent( $kid ){
+	private function _cmw_get_parent( $kid ){
 
 		$immediateParent = array_slice( $this->_cmw_tree[ $kid ]['ancestors'], -1, 1);
 		return $immediateParent[0];
@@ -290,7 +290,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param integer $itemID Menu item ID
 	 * @param string $classSuffix Suffix of class to be added to the kept items
 	 */
-	function _cmw_include_siblings_of( $itemID, $classSuffix='sibling' ){
+	private function _cmw_include_siblings_of( $itemID, $classSuffix='sibling' ){
 
 		foreach( $this->_cmw_tree[ $this->_cmw_get_parent( $itemID ) ]['kids'] as $i ){
 			if( !$this->_cmw_tree[ $i ]['keep'] ){
@@ -310,7 +310,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * 
 	 * @param integer $itemID Menu item ID
 	 */
-	function _cmw_set_keep_recursive( $itemID ){
+	private function _cmw_set_keep_recursive( $itemID ){
 
 		//at or above lowest?...
 		if( $this->_cmw_tree[ $itemID ]['level'] <= $this->_cmw_lowest ){
@@ -340,7 +340,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param integer $topLevel Uppermost level that can be kept
 	 * @param integer $bottomLevel Lowermost level that can be kept
 	 */
-	function _cmw_legacy_set_keep_kids( $itemId, $topLevel, $bottomLevel ){
+	private function _cmw_legacy_set_keep_kids( $itemId, $topLevel, $bottomLevel ){
 
 		for( $i = 0, $ct = count( $this->_cmw_tree[ $itemId ]['kids'] ); $i < $ct; $i++ ){
 			$j = $this->_cmw_tree[ $itemId ]['kids'][ $i ];
@@ -363,7 +363,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param {array} $elements Menu items
 	 * @return {array} Modified menu items
 	 */
-	function _cmw_walk( &$args, $elements ){
+	private function _cmw_walk( &$args, $elements ){
 
 			$cmw =& $args->_custom_menu_wizard;
 
@@ -647,38 +647,22 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			if( $continue ){
 				//might we want the (original) branch item's, or root item's, title as the widget title?...
 				if( $find_branch && $theBranchItem > 0 ){
-					$cmw['_walker']['branch_title'] = apply_filters(
-						'the_title',
-						$elements[ $this->_cmw_tree[ $theBranchItem ]['element'][0] ]->title,
-						$elements[ $this->_cmw_tree[ $theBranchItem ]['element'][0] ]->ID
-						);
+					$cmw['_walker']['branch_title'] = $elements[ $this->_cmw_tree[ $theBranchItem ]['element'][0] ]->title;
 					if( $this->_cmw_tree[ $theBranchItem ]['level'] > 1 ){
 						$topOfBranch = array_slice( $this->_cmw_tree[ $theBranchItem ]['ancestors'], 1, 1 );
 						$topOfBranch = $topOfBranch[0];
-						$cmw['_walker']['branch_root_title'] = apply_filters(
-							'the_title',
-							$elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ]->title,
-							$elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ]->ID
-							);
+						$cmw['_walker']['branch_root_title'] = $elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ]->title;
 					}else{
 						$cmw['_walker']['branch_root_title'] = $cmw['_walker']['branch_title'];
 					}
 				}
 				//might we want the current item's, or root item's, title as the widget title?...
 				if( !empty( $currentItem ) ){
-					$cmw['_walker']['current_title'] = apply_filters(
-						'the_title',
-						$elements[ $this->_cmw_tree[ $currentItem ]['element'][0] ]->title,
-						$elements[ $this->_cmw_tree[ $currentItem ]['element'][0] ]->ID
-						);
+					$cmw['_walker']['current_title'] = $elements[ $this->_cmw_tree[ $currentItem ]['element'][0] ]->title;
 					if( $this->_cmw_tree[ $currentItem ]['level'] > 1 ){
 						$topOfBranch = array_slice( $this->_cmw_tree[ $currentItem ]['ancestors'], 1, 1 );
 						$topOfBranch = $topOfBranch[0];
-						$cmw['_walker']['current_root_title'] = apply_filters(
-							'the_title',
-							$elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ]->title,
-							$elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ]->ID
-							);
+						$cmw['_walker']['current_root_title'] = $elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ]->title;
 					}else{
 						$cmw['_walker']['current_root_title'] = $cmw['_walker']['current_title'];
 					}
@@ -764,7 +748,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 * @param {array} $elements Menu items
 	 * @return {array} Modified menu items
 	 */
-	function _cmw_walk_legacy( &$args, $elements ){
+	private function _cmw_walk_legacy( &$args, $elements ){
 
 			//NB : $elements is an array of objects, indexed by position within the menu (menu_order),
 			//starting at 1 and incrementing sequentially regardless of parentage (ie. first item is [1],
