@@ -1,6 +1,6 @@
 <?php
 /*
- * Plugin Name: Custom Menu Wizard
+ * Custom Menu Wizard plugin
  *
  * Custom Menu Wizard Widget class
  */
@@ -9,7 +9,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	/**
 	 * class constructor
 	 */
-	function __construct() {
+	public function __construct() {
 
 		parent::__construct(
 			'custom-menu-wizard',
@@ -33,7 +33,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * 
 	 * @param array $instance Widget settings
 	 */
-	function form( $instance ) {
+	public function form( $instance ) {
 
 		//raised June 2014 : problem...
 		//using the widget_form_callback filter (as Widget Title Links plugin does, which raised the issue) it is perfectly
@@ -626,7 +626,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param array $old_instance Old widget settings
 	 * @return array Sanitized widget settings
 	 */
-	function update( $new_instance, $old_instance ) {
+	public function update( $new_instance, $old_instance ) {
 
 		//call the legacy update method for updates to existing widgets that don't have a version number (old format)...
 		if( empty( $new_instance['cmwv'] ) ){
@@ -647,12 +647,12 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * 
 	 * @filters : custom_menu_wizard_nav_params           array of params that will be sent to wp_nav_menu(), array of instance settings, id base
 	 *            custom_menu_wizard_settings_pre_widget  array of instance settings, id base
-	 *            custom_menu_wizard_widget_output        HTML output string, array of instance settings, id base
+	 *            custom_menu_wizard_widget_output        HTML output string, array of instance settings, id base, $args
 	 * 
 	 * @param object $args Widget arguments
 	 * @param array $instance Configuration for this widget instance
 	 */
-	function widget( $args, $instance ) {
+	public function widget( $args, $instance ) {
 
 		//call the legacy widget method for producing existing widgets that don't have a version number (old format)...
 		if( empty( $instance['cmwv'] ) ){
@@ -662,8 +662,6 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 		//sanitize $instance...
 		$instance = $this->cmw_settings( $instance, array(), __FUNCTION__ );
-
-		extract( $args, EXTR_SKIP );
 
 		//v1.1.0  As of WP v3.6, wp_nav_menu() automatically prevents any HTML output if there are no items...
 		$instance['hide_empty'] = $instance['hide_empty'] && $this->cmw_wp_version('3.6');
@@ -713,8 +711,12 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 					);
 				//for the walker's use...
 				$params['_custom_menu_wizard']['_walker'] = array();
-				//set wrapper to UL or OL...
+				//unless told not to, put the shortcode equiv. into a data item...
+				//NB: to turn this off (example):
+				//    add_filter( 'custom_menu_wizard_settings_pre_widget', 'cmw_no_cmws', 10, 2 );
+				//    function cmw_no_cmws( $instance, $id_base ){ $instance['cmws_off'] = true; return $instance; }
 				$dataCMWS = empty( $instance['cmws_off'] ) ? " data-cmws='" . esc_attr( $this->cmw_shortcode( $instance, true ) ) . "'" : '';
+				//set wrapper to UL or OL...
 				if( $instance['ol_root'] ){
 					$params['items_wrap'] = '<ol id="%1$s" class="%2$s" data-cmwv="' . $instance['cmwv'] . '"' . $dataCMWS . '>%3$s</ol>';
 				}else{
@@ -766,25 +768,26 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 						$out );
 
 					//try to add widget_class (if specified) to before_widget...
-					if( !empty( $instance['widget_class'] ) && !empty( $before_widget ) ){
-						//$before_widget is usually just a DIV start-tag, with an id and a class; if it
+					if( !empty( $instance['widget_class'] ) && !empty( $args['before_widget'] ) ){
+						//$args['before_widget'] is usually just a DIV start-tag, with an id and a class; if it
 						//gets more complicated than that then this may not work as expected...
-						if( preg_match( '/^<[^>]+?class=["\']/', $before_widget ) > 0 ){
+						if( preg_match( '/^<[^>]+?class=["\']/', $args['before_widget'] ) > 0 ){
 							//...already has a class attribute : prepend mine...
-							$before_widget = preg_replace( '/(class=["\'])/', '$1' . $instance['widget_class'] . ' ', $before_widget, 1 );
+							$args['before_widget'] = preg_replace( '/(class=["\'])/', '$1' . $instance['widget_class'] . ' ', $args['before_widget'], 1 );
 						}else{
 							//...doesn't currently have a class : add class attribute...
-							$before_widget = preg_replace( '/^(<\w+)(\s|>)/', '$1 class="' . $instance['widget_class'] . '"$2', $before_widget );
+							$args['before_widget'] = preg_replace( '/^(<\w+)(\s|>)/', '$1 class="' . $instance['widget_class'] . '"$2', $args['before_widget'] );
 						}
 					}
 				
 					if( !empty( $title ) ){
-						$out = $before_title . $title . $after_title . $out;
+						$out = $args['before_title'] . $title . $args['after_title'] . $out;
 					}
-					$out = $before_widget . $out . $after_widget;
+					$out = $args['before_widget'] . $out . $args['after_widget'];
 					//allow a filter to modify the entire output...
-					//eg. add_filter( 'custom_menu_wizard_widget_output', [filter_function], 10, 3 ) => $output (HTML string)
-					echo apply_filters( 'custom_menu_wizard_widget_output', $out, $instance, $this->id_base );
+					//eg. add_filter( 'custom_menu_wizard_widget_output', [filter_function], 10, 4 ) => $output (HTML string)
+					//NB 4th parameter ($args) added at v3.0.3
+					echo apply_filters( 'custom_menu_wizard_widget_output', $out, $instance, $this->id_base, $args );
 				}
 			}
 		}
@@ -794,7 +797,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	/**
 	 * outputs an assist anchor
 	 */
-	function cmw_assist_link(){
+	public function cmw_assist_link(){
 
 		//don't really need to worry about the id for non-javascript enabled usage because the css hides the
 		//button, but it doesn't hurt so I've left it in...
@@ -808,7 +811,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	/**
 	 * outputs the HTML to close off a collapsible/expandable group of settings
 	 */
-	function cmw_close_a_field_section(){
+	public function cmw_close_a_field_section(){
 
 		?></div><?php
 
@@ -821,7 +824,8 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param string $action 'pop' or 'push'
 	 * @param boolean $test What to push
 	 */
-	function cmw_disableif( $action = 'echo', $test = false ){
+	public function cmw_disableif( $action = 'echo', $test = false ){
+
 		if( !isset( $this->_cmw_disableif ) ){
 			$this->_cmw_disableif = array( '' );
 		}
@@ -846,6 +850,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			$e = array_slice( $this->_cmw_disableif, -1 );
 			echo $e[0];
 		}
+
 	}
 	
 	/**
@@ -862,7 +867,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param object $args
 	 * @return array Menu items 
 	 */
-	function cmw_filter_check_for_no_items($items, $args){
+	public function cmw_filter_check_for_no_items($items, $args){
 
 		if( !empty( $args->_custom_menu_wizard ) && empty( $items ) ){
 			add_filter( 'wp_nav_menu', array( $this, 'cmw_filter_no_output_when_empty' ), 65532, 2 );
@@ -884,7 +889,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param object $args
 	 * @return string HTML for the menu
 	 */
-	function cmw_filter_no_output_when_empty($nav_menu, $args){
+	public function cmw_filter_no_output_when_empty($nav_menu, $args){
 
 		remove_filter( 'wp_nav_menu', array( $this, __FUNCTION__ ), 65532, 2 );
 		return empty( $args->_custom_menu_wizard ) ? $nav_menu : '';
@@ -900,7 +905,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param object $args
 	 * @return array Menu items
 	 */
-	function cmw_filter_walker_items( $items, $args ){
+	public function cmw_filter_walker_items( $items, $args ){
 
 		if( !empty( $args->_custom_menu_wizard['_walker'] ) ){
 			$this->_cmw_walker = $args->_custom_menu_wizard['_walker'];
@@ -916,7 +921,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param string $field Field name
 	 * @param array $params Attribute values
 	 */
-	function cmw_formfield_checkbox( &$instance, $field, $params ){
+	public function cmw_formfield_checkbox( &$instance, $field, $params ){
 
 		$labelClass = empty( $params['lclass'] ) ? '' : $params['lclass'];
 		$fieldClass = empty( $params['fclass'] ) ? '' : $params['fclass'];
@@ -943,7 +948,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param string $field Field name
 	 * @param array $params Attribute values
 	 */
-	function cmw_formfield_textbox( &$instance, $field, $params ){
+	public function cmw_formfield_textbox( &$instance, $field, $params ){
 
 		$fieldClass = empty( $params['fclass'] ) ? '' : $params['fclass'];
 
@@ -971,7 +976,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param integer $selectedMenu (by reference) The instance setting to check against for a menu to be "selected"
 	 * @return array
 	 */
-	function cmw_get_custom_menus( &$selectedMenu ){
+	public function cmw_get_custom_menus( &$selectedMenu ){
 		
 		$findSM = $selectedMenu > 0;
 		$menus = wp_get_nav_menus( array( 'orderby' => 'name' ) );
@@ -1013,7 +1018,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param integer $selectedItem The instance setting to check against for an menu item to be "selected"
 	 * @return array|boolean
 	 */
-	function cmw_scan_menus( $selectedMenu, $selectedItem ){
+	public function cmw_scan_menus( $selectedMenu, $selectedItem ){
 
 		//create the options for the menu select & branch select...
 		// IE is a pita when it comes to SELECTs because it ignores any styling on OPTGROUPs and OPTIONs, so I'm using
@@ -1048,7 +1053,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			foreach( $menu->_items as $item ){
 				//exclude orphans!
 				if( isset($itemindents[ $item->menu_item_parent ])){
-					$title = apply_filters( 'the_title', $item->title, $item->ID );
+					$title = $item->title;
 					$level = $itemindents[ $item->menu_item_parent ] + 1;
 
 					$itemindents[ $item->ID ] = $level;
@@ -1067,11 +1072,11 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 							$rtn['selectedBranchName'] = $title; 
 						}
 						$rtn['selectedOptgroup'][ $sogCt ] .= '<option value="' . $item->ID . '" ' . $selected . ' data-cmw-level="' . $level . '">';
-						$rtn['selectedOptgroup'][ $sogCt ] .= str_repeat( '&nbsp;', ($level - 1) * 3 ) . $title . '</option>';
+						$rtn['selectedOptgroup'][ $sogCt ] .= str_repeat( '&nbsp;', ($level - 1) * 3 ) . esc_attr( $title ) . '</option>';
 					}
 					//don't set "selected" on the big list...
 					$menuGrpOpts .= '<option value="' . $item->ID . '" data-cmw-level="' . $level . '">';
-					$menuGrpOpts .= str_repeat( '&nbsp;', ($level - 1) * 3 ) . $title . '</option>';
+					$menuGrpOpts .= str_repeat( '&nbsp;', ($level - 1) * 3 ) . esc_attr( $title ) . '</option>';
 				}
 			}
 
@@ -1123,7 +1128,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param string $text Label
 	 * @param string $fname Field name
 	 */
-	function cmw_open_a_field_section( &$instance, $text, $fname ){
+	public function cmw_open_a_field_section( &$instance, $text, $fname ){
 
 		$hashid = $this->get_field_id( 'cmw' . ++$this->_cmw_hash_ct );
 ?>
@@ -1143,7 +1148,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param string $v Version to test for lower than
 	 * @return boolean
 	 */
-	function cmw_wp_version( $v, $gte=false ){
+	public function cmw_wp_version( $v, $gte=false ){
 		global $wp_version;
 
 		$rtn = version_compare( strtolower( $wp_version ), $v . 'a', '<' );
@@ -1159,7 +1164,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param string Name of the calling method
 	 * @return array Sanitized widget settings
 	 */
-	function cmw_settings( $from_instance, $base_instance, $method = 'update' ){
+	public function cmw_settings( $from_instance, $base_instance, $method = 'update' ){
 		
 /* old (pre v3) settings...
 		//switches...
@@ -1316,7 +1321,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param array $instance
 	 * @return string
 	 */
-	function cmw_shortcode( $instance, $asJSON=false ){
+	public function cmw_shortcode( $instance, $asJSON=false ){
 
 		$args = array(
 			'menu' => $instance['menu']
@@ -1444,7 +1449,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		unset( $args );
 
 		//NB at v3.0.0, the shortcode changed from custom_menu_wizard to cmwizard (the previous version is still supported)
-		return $asJSON ? json_encode( $m ) : '[cmwizard ' . implode( ' ', $m ) . ']';
+		return $asJSON ? json_encode( $m ) : '[cmwizard ' . implode( ' ', $m ) . '/]';
 
 	} //end cmw_shortcode()
 
@@ -1461,7 +1466,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * 
 	 * @param array $instance Widget settings
 	 */
-	function cmw_legacy_form( $instance ) {
+	public function cmw_legacy_form( $instance ) {
 
 		//sanitize $instance...
 		$instance = $this->cmw_legacy_settings( $instance, array(), 'form' );
@@ -1859,7 +1864,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param string $method Name suffix of the calling method
 	 * @return array Sanitized widget settings
 	 */
-	function cmw_legacy_settings( $from_instance, $base_instance, $method = 'update' ){
+	public function cmw_legacy_settings( $from_instance, $base_instance, $method = 'update' ){
 
 		$instance = is_array( $base_instance ) ? $base_instance : array();
 
@@ -1990,7 +1995,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param array $old_instance Old widget settings
 	 * @return array Sanitized widget settings
 	 */
-	function cmw_legacy_update( $new_instance, $old_instance ){
+	public function cmw_legacy_update( $new_instance, $old_instance ){
 
 		//allow a filter to return true, whereby updates to legacy widgets are disallowed...
 		//eg. apply_filter( 'custom_menu_wizard_prevent_legacy_updates', [filter function], 10, 1 ) => true
@@ -2013,17 +2018,15 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * 
 	 * @filters : custom_menu_wizard_nav_params           array of params that will be sent to wp_nav_menu(), array of instance settings, id base
 	 *            custom_menu_wizard_settings_pre_widget  array of instance settings, id base
-	 *            custom_menu_wizard_widget_output        HTML output string, array of instance settings, id base
+	 *            custom_menu_wizard_widget_output        HTML output string, array of instance settings, id base, $args
 	 * 
 	 * @param object $args Widget arguments
 	 * @param array $instance Configuration for this widget instance
 	 */
-	function cmw_legacy_widget( $args, $instance ) {
+	public function cmw_legacy_widget( $args, $instance ) {
 
 		//sanitize $instance...
 		$instance = $this->cmw_legacy_settings( $instance, array(), 'widget' );
-
-		extract( $args, EXTR_SKIP );
 
 		//v1.1.0  As of WP v3.6, wp_nav_menu() automatically prevents any HTML output if there are no items...
 		$instance['hide_empty'] = $instance['hide_empty'] && $this->cmw_wp_version('3.6');
@@ -2040,12 +2043,12 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			if ( !empty( $menu ) ){
 
 				if( !empty( $instance['widget_class'] ) ){
-					//$before_widget is usually just a DIV start-tag, with an id and a class; if it
+					//$args['before_widget'] is usually just a DIV start-tag, with an id and a class; if it
 					//gets more complicated than that then this may not work as expected...
-					if( preg_match( '/^<[^>]+?class=["\']/', $before_widget ) > 0 ){
-						$before_widget = preg_replace( '/(class=["\'])/', '$1' . $instance['widget_class'] . ' ', $before_widget, 1 );
+					if( preg_match( '/^<[^>]+?class=["\']/', $args['before_widget'] ) > 0 ){
+						$args['before_widget'] = preg_replace( '/(class=["\'])/', '$1' . $instance['widget_class'] . ' ', $args['before_widget'], 1 );
 					}else{
-						$before_widget = preg_replace( '/^(<\w+)(\s|>)/', '$1 class="' . $instance['widget_class'] . '"$2', $before_widget );
+						$args['before_widget'] = preg_replace( '/^(<\w+)(\s|>)/', '$1 class="' . $instance['widget_class'] . '"$2', $args['before_widget'] );
 					}
 				}
 				
@@ -2126,12 +2129,12 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 						$out );
 
 					if ( !empty($title) ){
-						$out = $before_title . apply_filters('widget_title', $title, $instance, $this->id_base) . $after_title . $out;
+						$out = $args['before_title'] . apply_filters('widget_title', $title, $instance, $this->id_base) . $args['after_title'] . $out;
 					}
-					$out = $before_widget . $out . $after_widget;
+					$out = $args['before_widget'] . $out . $args['after_widget'];
 					//allow a filter to modify the entire output...
-					//eg. add_filter( 'custom_menu_wizard_widget_output', [filter_function], 10, 3 ) => $output (HTML string)
-					echo apply_filters( 'custom_menu_wizard_widget_output', $out, $instance, $this->id_base );
+					//eg. add_filter( 'custom_menu_wizard_widget_output', [filter_function], 10, 4 ) => $output (HTML string)
+					echo apply_filters( 'custom_menu_wizard_widget_output', $out, $instance, $this->id_base, $args );
 				}
 			}
 		}

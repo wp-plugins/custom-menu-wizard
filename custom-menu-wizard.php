@@ -3,13 +3,19 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 3.0.2
+ * Version: 3.0.3
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 defined( 'ABSPATH' ) or exit();
 /*
+ * v3.0.3 change log
+ * - removed all occurrences of "Plugin " followed by "Name" from everywhere except the main plugin file (this one!) to avoid update() incorrectly reporting "invalid header" when activating straight from installation (rather than from the Plugin admin page)
+ * - tweak : eliminate the over-use of get_title() when determining the widget title
+ * - tweak : added self-terminating forward slash to generated shortcodes
+ * - prepare for WPv4 (avoid deprecated functions)
+ * 
  * v3.0.2 change log
  * - fixed bug where the shortcode shown on new instances didn't initially reflect the automatically selected menu
  * 
@@ -120,7 +126,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 	//declare the main plugin class...
 	class Custom_Menu_Wizard_Plugin {
 		
-		public static $version = '3.0.2';
+		public static $version = '3.0.3';
 		protected static $instance;
 		
 		/**
@@ -259,7 +265,12 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 				);
 			foreach( $codes as $k => $v ){
 				$j = str_replace( '-', '_', $k );
-				$$j = '%' . like_escape( esc_sql ( $v ) ) . '%';
+				//like_escape deprecated in v4...
+				if( method_exists( $wpdb, 'esc_like' ) ){
+					$$j = '%' . $wpdb->esc_like( $v ) . '%';
+				}else{
+					$$j = '%' . like_escape( esc_sql ( $v ) ) . '%';
+				}
 			}
 
 			//search in all custom fields...
