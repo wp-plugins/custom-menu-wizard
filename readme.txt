@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
 Tested up to: 3.9
-Stable tag: 3.0.2
+Stable tag: 3.0.3
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -45,7 +45,7 @@ there are probably a couple of very common scenarios:
     * Open the FILTERS section :
         * under Primary Filter, click on the *Branch* radio
     * Save the widget!
-    * *Equivalent shortcode resembles `[cmwizard menu=N title="Your Title" branch=current]`*
+    * *Equivalent shortcode resembles `[cmwizard menu=N title="Your Title" branch=current/]`*
 
 2. Show just the descendants of the current menu item (if there are any)...
     * Drag a new Custom Menu Wizard widget into the sidebar, and give it a title (if you want one)
@@ -54,7 +54,7 @@ there are probably a couple of very common scenarios:
         * under Primary Filter, click on the *Branch* radio
         * under Secondary Filter, set *Starting at* to "+1 (children)"
     * Save the widget!
-    * *Equivalent shortcode resembles `[cmwizard menu=N title="Your Title" branch=current start_at="+1"]`*
+    * *Equivalent shortcode resembles `[cmwizard menu=N title="Your Title" branch=current start_at="+1"/]`*
 
 If you like this widget (or if you don't?), please consider taking a moment or two to give it a 
 [Review](http://wordpress.org/support/view/plugin-reviews/custom-menu-wizard) : it helps others, and gives me valuable feedback.
@@ -528,32 +528,32 @@ If enabled it will return a list of posts that contain a CMW shortcode. If `find
 notice of is `title`, which will be output (if supplied) as an H3 in front of the list. The information provided by this utility is also available 
 from any widget's "assist".
 
-Example : `[cmwizard findme=1 title="Posts containing a CMW shortcode..."]`
+Example : `[cmwizard findme=1 title="Posts containing a CMW shortcode..."/]`
 
 == Shortcode Examples ==
 
 * Show the entire "main" menu
 
     `
-    [cmwizard menu=main]
+    [cmwizard menu=main/]
     `
 
 * Show the children of the current menu item within the "main" menu, for unlimited depth, setting the widget title from the current menu item
 
     `
-    [cmwizard menu=main branch=current start_at=children title_from=current]
+    [cmwizard menu=main branch=current start_at=children title_from=current/]
     `
 
 * From the "animals" menu, show all the items *immediately* below "Small Dogs", plus "Small Dogs" and its sibling items, as ordered lists
 
     `
-    [cmwizard menu="animals" branch="small dogs" depth=2 include="siblings" ol_root=1 ol_sub=1]
+    [cmwizard menu="animals" branch="small dogs" depth=2 include="siblings" ol_root=1 ol_sub=1/]
     `
 
 * From the "animals" menu, show the entire "Small Animals" branch, with the sole exception of the "Small Animals" item itself, whenever "Small Animals" or one of its descendants is the current menu item
 
     `
-    [cmwizard menu="animals" branch="small animals" start_at=children contains_current=primary]
+    [cmwizard menu="animals" branch="small animals" start_at=children contains_current=primary/]
     `
 
 == Installation ==
@@ -652,7 +652,7 @@ contains any CMW shortcode. Each entry is a link that opens the item in a new ta
 post type, id, whether the shortcode(s) are in content and/or meta data, and the shortcode(s) concerned.
 This utility does not check things like text widgets, plugin-specific tables, theme-provided textareas, etc.
 
-There is also an extension to the shortcode - `[cmwizard findme=1]` - that will output the same information, should you not be able to use 
+There is also an extension to the shortcode - `[cmwizard findme=1/]` - that will output the same information, should you not be able to use 
 the "assist" (for some unknown reason). You may optionally provide a title attribute; any other attributes are ignored. 
 Note that output from this shortcode extension is restricted to users with edit_pages capability.
 
@@ -668,6 +668,12 @@ Note that output from this shortcode extension is restricted to users with edit_
 8. Widget's "assist"
 
 == Changelog ==
+
+= 3.0.3 =
+* bugfix : removed all occurrences of "Plugin " followed by "Name" from everywhere except the main plugin file to avoid update() reporting Invalid Header when activating straight from installation (rather than from the Plugins page)
+* tweak : eliminate the over-use of get_title() when determining the widget title
+* tweak : added self-terminating forward slash to generated shortcodes
+* change : prepare for WordPress v4 (avoid use of deprecated functions)
 
 = 3.0.2 =
 * bugfix : the shortcode display on new instances of the widget (in admin) did not initially reflect the automatically-selected menu
@@ -774,6 +780,11 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.0.3 =
+Fixed problem with WordPress's update() reporting Invalid Header when activating immediately following installation (as opposed to activating via Plugins page).
+Tweaked the generated shortcode to add a self-terminating forward slash. Please note that this tweak is merely a metter of "good practice" : there is no need to update your existing, working, shortcodes!
+Also removed multiple calls to get_title() when determining the widget's title, and made some minor updates in readiness for WordPress v4.
 
 = 3.0.2 =
 Fixed a bug where the shortcode displayed on new instances of the widget (in admin) did not initially reflect the automatically-selected menu
