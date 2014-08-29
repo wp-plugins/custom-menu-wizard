@@ -3,8 +3,8 @@ Contributors: wizzud
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KP2LVCBXNCEB4
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
-Tested up to: 3.9
-Stable tag: 3.0.3
+Tested up to: 4.0
+Stable tag: 3.0.4
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -202,9 +202,10 @@ or below the `Starting at` level, and do not include any items that would break 
     Include any siblings of the item selected as the `Branch` filter (ie. any items at the same level and within
     the same branch as the `Branch` item).
 
-* **All Root Items** *checkbox*
+* **Level** *select*
 
-    This is not restricted by other previous filter settings, and simply adds all the top level menu items into the mix.
+    This allows an entire level of items to be included, optionally also including all levels either above or below it.
+    This replaces the `All Root Items` checkbox (pre v3.0.4), which only allowed for the inclusion of the root level items.
 
 ***Exclusions***
 
@@ -223,7 +224,7 @@ or below the `Starting at` level, and do not include any items that would break 
     the "C" branch, then you could set `Level` to "1 (root)" and `Exclusions` to, say, "12+", where "12" is the menu item id for "C" and
     the "+" indicates that all the descendants of "C" should also be excluded.
 
-* **By Level** *select*
+* **Level** *select*
 
     This allows an entire level of items to be excluded, optionally also excluding all levels either above or below it.
 
@@ -432,10 +433,6 @@ and its relevant descendants, but also all that item's siblings *and their desce
 *switch, off by default, 1 to enable* : See widget's `Relative to Current Item` option, under *Secondary Filter*,
 [Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above.
     
-= include_root =
-*switch, off by default, 1 to enable* : Sets the widget's Include `All Root Items` option. See widget's `All Root Items` 
-option, under *Inclusions*, [Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above.
-
 = ancestors =
 *integer, default 0 (off)* : Sets an absolute level (positive integer), or a relative number of levels (negative integer), for which
 the ancestors of the `Branch` filter item should be included. See widget's `Branch Ancestors` option, under *Inclusions*, 
@@ -450,13 +447,21 @@ the siblings of ancestors of the `Branch` filter item should be included. See wi
 *switch, off by default, 1 to enable* : See widget's `Branch Siblings` option, under *Inclusions*, 
 [Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above. (only relevant to a `Branch` filter)
 
+= include_level =
+*string* : A level (1, 2, 3, etc), optionally followed by a "+" or "-" to include all subsequent (lower) or prior (higher) 
+levels respectively. For example, "2" will include all items at level 2, whereas "2-" would include all level 1 **and** level 2 items, 
+and "2+" would include all items at level 2 or greater.
+
+Note that prior to v3.0.4, this was `include_root` (a switch), which only included the root level : `include_root` is still accepted, even
+though now deprecated, and is equivalent to setting `include_level` to "1". However, if `include_level` is specified then it takes precedence.
+
 = exclude =
 *string* : Comma-separated list of meu item ids, where an id can optionally be followed by a '+' to include all its descendants (eg. "23+").
 
 = exclude_level =
 *string* : A level (1, 2, 3, etc), optionally followed by a "+" or "-" to include all subsequent (lower) or prior (higher) 
 levels respectively. For example, "2" will exclude all items at level 2, whereas "2-" would exclude all level 1 **and** level 2 items, 
-and "2+" would exlude all items at level 2 or greater.
+and "2+" would exclude all items at level 2 or greater.
 
 = contains_current =
 *string* : Accepted values : "menu", "primary", "secondary", "inclusions", or "output". See widget's *Qualifier* options,
@@ -669,6 +674,13 @@ Note that output from this shortcode extension is restricted to users with edit_
 
 == Changelog ==
 
+= 3.0.4 =
+* bugfix : corrected the display of the "No Current Item!" warning in the "assist"
+* bugfix : corrected the enabling/disabling of a couple of fields in the widget form, and tweaked the indentation for better responsiveness
+* bugfix : corrected the options setup when in accessibility mode with javascript enabled
+* addition : added a warning about the accuracy of the shortcode when javascript is disabled
+* addition : extended the All Root Items inclusion to be a selectable number of levels (as per the Exclusions by Level)
+
 = 3.0.3 =
 * bugfix : removed all occurrences of "Plugin " followed by "Name" from everywhere except the main plugin file to avoid update() reporting Invalid Header when activating straight from installation (rather than from the Plugins page)
 * tweak : eliminate the over-use of get_title() when determining the widget title
@@ -780,6 +792,10 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.0.4 =
+Fixed a couple of minor bugs with the "assist" and the widget form, and corrected a bug with accessibility mode when javascript is enabled.
+Extended Include Root Items to allow selection by level, as is provided for Exclusions by Level (eg. include_root=1 is now include_level="1").
 
 = 3.0.3 =
 Fixed problem with WordPress's update() reporting Invalid Header when activating immediately following installation (as opposed to activating via Plugins page).
