@@ -17,8 +17,8 @@
 .widget-custom-menu-wizard-onchange .cmw-colour-grey input {color:#7F7F7F}
 .widget-custom-menu-wizard-onchange small.cmw-colour-grey {vertical-align:top;}
 .widget-custom-menu-wizard-onchange .cmw-display-none {display:none;}
-.widget-custom-menu-wizard-onchange .cmw-followed-by {margin-right:1em;}
-.widget-custom-menu-wizard-onchange .cmw-indented {margin-left:1em;}
+.widget-custom-menu-wizard-onchange .cmw-followed-by:after {content:""; display:inline-block; width:1em;}
+.widget-custom-menu-wizard-onchange .cmw-indented {margin-left:1em; text-indent:-1em;}
 .widget-custom-menu-wizard-onchange .cmw-maxwidth-twothirds {max-width:66% !important;}
 .widget-custom-menu-wizard-onchange .cmw-off-the-page {display:none; position:absolute; left:-5000px; top:-5000px;}
 .widget-custom-menu-wizard-onchange .cmw-pseudo-para {margin:1em 0;}
@@ -45,7 +45,8 @@ a.widget-custom-menu-wizard-fieldset.cmw-collapsed-fieldset:active {background-p
 .no-js a.widget-custom-menu-wizard-fieldset.cmw-collapsed-fieldset:active {background-position:100% -112px;}
 .no-js .widget-custom-menu-wizard-onchange .cmw-start-fieldset-collapsed {display:block;}
 .no-js a.widget-custom-menu-wizard-fieldset {background-image:none;}
-.no-js .widget-custom-menu-wizard-assist {display:none;}
+.no-js .widget-custom-menu-wizard-assist,
+.js .widget-custom-menu-wizard-onchange .cmw-shortcode-nojs {display:none;}
 /*...customizer tweaks...*/
 .wp-customizer .widget-custom-menu-wizard-onchange input[type="text"] {margin:1px 0;}
 /*...warnings...*/

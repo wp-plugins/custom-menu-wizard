@@ -75,6 +75,26 @@ jQuery(function($){
 				return (!below ? above : below)[!below ? 'closest' : 'find'](widgetCustomMenuWizardClass('onchange', 1));
 			},
 	/**
+	 * given an option in the form of one-or-more digits, optionally followed by a plus or minus, return the relevant classes
+	 * @param {string} option A setting, eg. settings.exclude_level
+	 * @param {integer} maxLevel Maximum number of levels available
+	 * @return {string} CSV of classes, eg. '.level-1,'level-2' for option='2-' (or option='1+' if maxLevel=2)
+	 */
+			getLevelClasses = function(option, maxLevel){
+				var rtn = [],
+						k = option.match(/^(\d+)(\+|-)?$/),
+						i;
+				k = k ? [parseInt(k[1], 10), k[2] || ''] : [];
+				if(k[0] > 0){
+					for(i = 1; i <= maxLevel; i++){
+						if( i === k[0] || (k[1] === '-' && i < k[0]) || (k[1] === '+' && i > k[0]) ){
+							rtn.push('.level-' + i);
+						}
+					}
+				}
+				return rtn.join(',');
+			},
+	/**
 	 * gets the widget's field values
 	 * @param {object} oc jQuery of the widget's onchange wrapper
 	 * @return {object} key=>value pairs of the field element values 
@@ -83,7 +103,7 @@ jQuery(function($){
 				var settings = {},
 						legacyVersion = oc.data('cmwDialogVersion') === '2.1.0',
 						csv = {items:1, exclude:1},
-						keepAsString = $.extend({branch_start:1, exclude_level:1}, csv);
+						keepAsString = $.extend({branch_start:1, exclude_level:1, include_level:1}, csv);
 				$.each(oc.find(':input').serializeArray(), function(i, v){
 					var name = v.name.replace(/.*\[([^\]]+)\]$/, '$1'),
 							val = !keepAsString[name] && /^-?\d+$/.test(v.value) ? parseInt(v.value, 10) : v.value;
@@ -645,7 +665,7 @@ jQuery(function($){
 				}
 			});
 
-			oc.find('.cmw-exclude-level').each(function(){
+			oc.find('.cmw-include-level,.cmw-exclude-level').each(function(){
 				var self = $(this),
 						options = self.find('option'),
 						ct = (options.length - 1) / 3,
@@ -665,29 +685,23 @@ jQuery(function($){
 			});
 
 			//do the easy levels...
-			oc.find('.cmw-level').each(function(){
+			oc.find('.cmw-set-levels').each(function(){
 				var self = $(this),
-						ct = self.find('option').length;
+						data = self.data(),
+						txt = data.cmwTextLevels || '',
+						leave = data.cmwSetLevels || 0,
+						opts = self.find('option'),
+						ct = opts.length - leave;
+				//if current value exceeds maxLevel, reset to first option...
 				if(self.val() > maxLevel){
-					self.val(1);
+					self.val( opts.eq(0).val() );
 				}
-				self.find('option').slice(maxLevel).remove();
+				//remove anything above maxLevel...
+				self.find('option').slice(leave + maxLevel).remove();
+				//append enough new options to bring up to maxLevel...
 				while(ct < maxLevel){
 					++ct;
-					self.append( $('<option/>', {value:ct}).text(ct) );
-				}
-			});
-			oc.find('.cmw-depth,.cmw-fallback-depth').each(function(){
-				var self = $(this),
-						ct = self.find('option').length,
-						txt = ' ' + self.data().cmwTextLevels;
-				if(self.val() > maxLevel){
-					self.val(0);
-				}
-				self.find('option').slice(maxLevel + 1).remove();
-				while(ct <= maxLevel){
 					self.append( $('<option/>', {value:ct}).text(ct + txt) );
-					++ct;
 				}
 			});
 		}, //end cmwAssist.setLevels()
@@ -701,7 +715,8 @@ jQuery(function($){
 					byItems = oc.find('.cmw-byitems').prop('checked'),
 					notByBranch = byItems || !byBranchCheckbox.prop('checked'),
 					menuItems = oc.find('.cmw-assist-items'),
-					selectedItem = parseInt(menuItems.val(), 10);
+					selectedItem = parseInt(menuItems.val(), 10),
+					fallback;
 			//change of menu? : make sure the correct optgroup of menu items is used...
 			if(target.hasClass('cmw-select-menu')){
 				selectedItem = swapItems(menuItems, selectedItem, target[0].selectedIndex);
@@ -728,12 +743,13 @@ jQuery(function($){
 				oc.find('.cmw-ancestors').val( target.val() );
 			}
 
+			fallback = oc.find('.cmw-fallback').val();
 			$.each( //disable if...
 				{	'-ss' : byItems, //...is Items
-					'-ud' : oc.find('.cmw-depth').val() < 1, //...is Unlimited Depth
+					'-ud' : byItems || oc.find('.cmw-depth').val() < 1, //...is Unlimited Depth
 					'not-br' : notByBranch, //...is NOT Branch
 					'not-br-ci' : notByBranch || !!selectedItem, //...is NOT Branch:Current Item
-					'not-fb-pc' : !{'parent':1, 'current':1}[oc.find('.cmw-fallback').val()] //...is NOT fallback to parent or current
+					'not-fb-pc' : notByBranch || !!selectedItem || (fallback !== 'parent' && fallback !== 'current') //...is NOT fallback to parent or current
 				},
 				function(k, v){
 					oc.find('.cmw-disableif' + k).toggleClass('cmw-colour-grey', v).find('input,select').prop('disabled', v);
@@ -807,6 +823,10 @@ jQuery(function($){
 					args.ancestor_siblings = settings.ancestor_siblings;
 				}
 			}
+			//inclusions by level...
+			if(settings.include_level){
+				args.include_level = [settings.include_level];
+			}
 			//exclusions by id...
 			if(settings._exclude){
 				args.exclude = [settings._exclude];
@@ -833,7 +853,7 @@ jQuery(function($){
 				args.title_from = n;
 			}
 			//switches...
-			for(n in {allow_all_root:1, siblings:1, include_root:1, flat_output:1, ol_root:1, ol_sub:1}){
+			for(n in {allow_all_root:1, siblings:1, flat_output:1, ol_root:1, ol_sub:1}){
 				if(settings[n]){
 					args[n] = 1;
 				}
@@ -911,14 +931,10 @@ jQuery(function($){
 
 				//ticks and crosses (need to be run against the full set of items)...
 				exclusions = filterTickCross(items, settings, 'cross');
-				if(byItems){
-					//primary filter : items...
-					items = filterTickCross(items, settings, 'tick');
-				}
 
-				//if current item is definitely needed and is not present, cop out...
-				if(items.length && !currentItemLI.length && (!!settings.contains_current || ciBranch)){
-					items = $([]);
+				//primary filter : items...
+				if(byItems){
+					items = filterTickCross(items, settings, 'tick');
 				}
 
 				//primary filter : branch...
@@ -940,6 +956,13 @@ jQuery(function($){
 						j.push('.level-' + i);
 					}
 					items = items.not( j.join(',') );
+				}
+
+				//check for current item in menu...
+				//NB: this used to be done (pre 3.0.4) in front of the branch primary filter, but that filter setup may now
+				//    be needed, so this check has moved down so that all primary filters are done before checking
+				if(settings.contains_current === 'menu' && items.length && !currentItemLI.length){
+					items = $([]);
 				}
 
 				//check for current item after primary...
@@ -1049,6 +1072,7 @@ jQuery(function($){
 				}
 
 				//branch inclusions...
+				//NB: only applicable if there are already items
 				if(byBranch && items.length){
 					//branch ancestors, possibly with their siblings : but only if the original branch item is either
 					//in items or is below lastVisibleLevel; ALSO, do not show ancestors below lastVisibleLevel!
@@ -1098,10 +1122,14 @@ jQuery(function($){
 					}
 				}
 				//other inclusions...
-				if(items.length && settings.include_root){
-					j = items.length;
-					items = items.add( topOfMenu.find('.level-1') );
-					hasIncl += items.length - j;
+				if(items.length && !!settings.include_level){
+					k = getLevelClasses(settings.include_level, maxLevel);
+					if(k){
+						//find and add...
+						j = items.length;
+						items = items.add( topOfMenu.find(k) );
+						hasIncl += items.length - j;
+					}
 				}
 
 				//check for current item after inclusions...
@@ -1111,25 +1139,18 @@ jQuery(function($){
 
 				//exclusions...
 				if(items.length && exclusions.length){
+					//filter to remove...
 					j = items.length;
 					items = items.not(exclusions);
 					hasExcl += j - items.length;
 				}
 				if(items.length && !!settings.exclude_level){
-					k = settings.exclude_level.match(/^(\d+)(\+|-)?$/);
-					k = k ? [parseInt(k[1], 10), k[2] || ''] : [];
-					if(k[0] > 0){
-						for(j = [], i = 1; i <= maxLevel; i++){
-							if( i === k[0] || (k[1] === '-' && i < k[0]) || (k[1] === '+' && i > k[0]) ){
-								j.push('.level-' + i);
-							}
-						}
-						if(j.length){
-							//filter to remove...
-							k = items.length;
-							items = items.not( j.join(',') );
-							hasExcl += k - items.length;
-						}
+					k = getLevelClasses(settings.exclude_level, maxLevel);
+					if(k){
+						//filter to remove...
+						j = items.length;
+						items = items.not(k);
+						hasExcl += j - items.length;
 					}
 				}
 
@@ -1156,7 +1177,7 @@ jQuery(function($){
 				//show/hide the fall back message...
 				dialog.find('.cmw-demo-fallback').data('fellback', fallback).toggleClass('updated', !!fallback);
 				//show/hide the 'select current item' prompt...
-				dialog.find('.cmw-demo-setcurrent').toggleClass('error', !currentItemLI.length && (settings.contains_current || ciBranch));
+				dialog.find('.cmw-demo-setcurrent').toggleClass('error', !currentItemLI.length && (!!settings.contains_current || ciBranch));
 				//...and the inclusions/exclusions messages...
 				i = {inclusions:hasIncl, exclusions:hasExcl};
 				for(j in i){
@@ -1203,7 +1224,7 @@ jQuery(function($){
 			theSelect = oc.find('.cmw-depth');
 			level = theSelect.val();
 			ct = theSelect.find('option').length;
-			txt = ' ' + theSelect.data().cmwTextLevels;
+			txt = theSelect.data().cmwTextLevels;
 			if(level > maxLevel){
 				theSelect.val(0); //=unlimited
 			}
@@ -1521,4 +1542,8 @@ jQuery(function($){
 			return false;
 		});
 
+	//editing in accessibility mode...
+	if(!!window.Custom_Menu_Wizard_Widget){
+		$(window.Custom_Menu_Wizard_Widget.trigger || []).trigger('change');
+	}
 });

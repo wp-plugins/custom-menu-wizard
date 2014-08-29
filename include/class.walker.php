@@ -165,7 +165,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 					// - 1st found : current & ancestor = d001
 					// - 2nd found : current & parent & ancestor = c002
 					// - 3rd found : just current = a003
-					// - 4th found : just current & parent = b004
+					// - 4th found : current & parent = b004
 					// - 5th found : just current = a005
 					//reverse sort keys alphabetically and a003 comes out on bottom, so third found gets used! (copes with 999 "current" items; should be enough!)
 					$j = $item->current_item_ancestor ? ( $item->current_item_parent ? 'c' : 'd') : ( $item->current_item_parent ? 'b' : 'a' );
@@ -272,6 +272,54 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	}
 
 	/**
+	 * clear any keep flags currently set in the tree
+	 */
+	private function _cmw_clear_down_tree(){
+
+		if( $this->_cmw_tree[0]['keepCount'] > 0 ){
+			foreach( $this->_cmw_tree as $k => $v ){
+				$this->_cmw_tree[ $k ]['keep'] = false;
+				$this->_cmw_tree[ $k ]['classes'] = array();
+			}
+			$this->_cmw_tree[0]['keepCount'] = 0;
+		}
+
+	}
+
+	/**
+	 * resolve digit(s) optionally followed by a plus/minus into a 'from' level an a 'to' level
+	 * IMPORTANT : 'from' is inclusive, 'to' is exclusive, so a for() would be for( $i = $rtn['from']; $i < $rtn['to']; $i++ )
+	 * 
+	 * @param {string} $option Level with optional +/- appended
+	 * @return {array} False if $option doesn't parse
+	 */
+	private function _cmw_decipher_plusminus_level( $option ){
+
+		$rtn = array();
+		if( !empty( $option ) && preg_match( '/^(\d+)(\+|-)?$/', $option, $m ) > 0 ){
+			$m[1] = intval( $m[1] );
+			if( $m[1] > 0 ){
+				if( empty( $m[2] ) ){
+					//no plus/minus : 'from' is the level, 'to' is the next level...
+					$rtn['from'] = $m[1];
+					$rtn['to'] = $m[1] + 1;
+				}elseif( $m[2] == '+' ){
+					//plus : 'from' is the level, 'to' is the number of levels 
+					//NB: there is an artificial level zero, so if the menu has 10 levels, a count of levels will give 11!
+					$rtn['from'] = $m[1];
+					$rtn['to'] = count( $this->_cmw_levels );
+				}else{
+					//minus : 'from' is level 1, 'to' is the level plus 1
+					$rtn['from'] = 1;
+					$rtn['to'] = $m[1] + 1;
+				}
+			}
+		}
+		return empty( $rtn ) ? false : $rtn;
+
+	}
+
+	/**
 	 * returns the menu item id if an item's parent
 	 * 
 	 * @param integer $kid Menu item ID
@@ -305,8 +353,44 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	} //end _cmw_include_siblings_of()
 
 	/**
+	 * runs exclusions, if there are any
+	 * 
+	 * @param {array} $cmw Settings
+	 * @return {boolean} keepCount > 0?
+	 */
+	private function _cmw_run_exclusions( &$cmw ){
+
+		$rtn = $this->_cmw_tree[0]['keepCount'] > 0;
+		if( $rtn && !empty( $cmw['__exclude'] )){
+			foreach( $cmw['__exclude'] as $itemID ){
+				if( $itemID > 0 && isset( $this->_cmw_tree[ $itemID ] ) && $this->_cmw_tree[ $itemID ]['keep'] ){
+					$this->_cmw_tree[ $itemID ]['keep'] = false;
+					$this->_cmw_tree[0]['keepCount']--;
+				}
+			}
+			$rtn = $this->_cmw_tree[0]['keepCount'] > 0;
+		}
+		if( $rtn && ( $fromTo = $this->_cmw_decipher_plusminus_level( $cmw['exclude_level'] ) ) !== false ){
+			while( isset( $this->_cmw_levels[ $fromTo['from'] ] ) && $fromTo['from'] < $fromTo['to'] ){
+				foreach( $this->_cmw_levels[ $fromTo['from'] ] as $itemID ){
+					if( $this->_cmw_tree[ $itemID ]['keep'] ){
+						$this->_cmw_tree[ $itemID ]['keep'] = false;
+						$this->_cmw_tree[0]['keepCount']--;
+					}
+				}
+				$fromTo['from']++;
+			}
+			$rtn = $this->_cmw_tree[0]['keepCount'] > 0;
+		}
+		return $rtn;
+
+	}
+
+	/**
 	 * current : recursively set the keep flag if within specified level/depth
 	 * if item passed in is eligible, sets that item as kept and runs through its kids recursively
+	 * uses _cmw_lowest & _cmw_highest : note that _cmw_lowest is the lowest level in the structure - *not*
+	 *                                   the numerically lowest value of level - and that both are inclusive!
 	 * 
 	 * @param integer $itemID Menu item ID
 	 */
@@ -365,6 +449,13 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	 */
 	private function _cmw_walk( &$args, $elements ){
 
+			$id_field = $this->db_fields['id']; //eg. = 'db_id'
+			$parent_field = $this->db_fields['parent']; //eg. = 'menu_item_parent'
+
+			$unlimited = 65532;
+			$topOfBranch = -1;
+			$continue = true;
+
 			$cmw =& $args->_custom_menu_wizard;
 
 			$cmw['_walker']['fellback'] = false;
@@ -383,19 +474,6 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			//no-kids fallback?...
 			$canFallback = $find_current && in_array( $cmw['fallback'], array('current', 'parent', 'quit') );
 
-			$id_field = $this->db_fields['id']; //eg. = 'db_id'
-			$parent_field = $this->db_fields['parent']; //eg. = 'menu_item_parent'
-
-			$unlimited = 65532;
-			$topOfBranch = -1;
-
-			$continue = true;
-			//no point doing much more if we need the current item and we haven't found it...
-			//handles contains_current == 'menu'...
-			if( empty( $currentItem ) && ( $find_current || !empty( $cmw['contains_current'] ) ) ){
-				$continue = false;
-			}
-
 			//PRIMARY FILTERS...
 			if( $continue ){
 				//levels...
@@ -408,19 +486,26 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				}
 				//branch...
 				if( $find_branch ){
+					//topOfBranch gets set to -1 if it can't be determined...
 					$topOfBranch = $find_current
-						? $currentItem
-						: ( isset( $this->_cmw_tree[ $cmw['branch'] ] )
-								? $cmw['branch']
-								: -1
-							);
+						? ( empty( $currentItem ) ? -1 : $currentItem )
+						: ( isset( $this->_cmw_tree[ $cmw['branch'] ] ) ? $cmw['branch'] : -1 );
 					$theBranchItem = $topOfBranch;
 					$continue = $topOfBranch > 0;
 				}
 			} //end PRIMARIES
 
 			//check for current item...
-			if( $continue && ( $cmw['contains_current'] == 'primary' ) ){
+			//v3.0.4 : do this here (rather than above the primary filters) because I might need
+			//         $theBranchItem later on
+			//NB: check is for *any* requirement for current item, not just 'menu', because I don't want to have to 
+			//    continually check for $currentItem being non-empty ($find_current is already coped with in the primaries)
+			if( $continue && !empty( $cmw['contains_current'] ) ){
+				$continue = !empty( $currentItem );
+			}
+
+			//check for current item...
+			if( $continue && $cmw['contains_current'] == 'primary' ){
 				if( $find_level ){
 					$continue = $this->_cmw_tree[ $currentItem ]['level'] >= $cmw['level'];
 				}
@@ -586,14 +671,17 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 						$this->_cmw_include_siblings_of( $theBranchItem );
 					}
 				}
-				if( $cmw['include_root'] ){
-					//all root items...
-					foreach( $this->_cmw_levels[1] as $itemID ){
-						if( !$this->_cmw_tree[ $itemID ]['keep'] ){
-							$this->_cmw_tree[ $itemID ]['keep'] = true;
-							$this->_cmw_tree[ $itemID ]['classes'][] = 'cmw-an-included-root-item';
-							$this->_cmw_tree[0]['keepCount']++;
+				//include_level (replacement/extension of include_root, as of v3.0.4)...
+				if( ( $fromTo = $this->_cmw_decipher_plusminus_level( $cmw['include_level'] ) ) !== false ){
+					while( isset( $this->_cmw_levels[ $fromTo['from'] ] ) && $fromTo['from'] < $fromTo['to'] ){
+						foreach( $this->_cmw_levels[ $fromTo['from'] ] as $itemID ){
+							if( !$this->_cmw_tree[ $itemID ]['keep'] ){
+								$this->_cmw_tree[ $itemID ]['keep'] = true;
+								$this->_cmw_tree[ $itemID ]['classes'][] = 'cmw-an-included-level';
+								$this->_cmw_tree[0]['keepCount']++;
+							}
 						}
+						$fromTo['from']++;
 					}
 				}
 			} //end INCLUSIONS
@@ -605,37 +693,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 
 			//EXCLUSIONS...
 			if( $continue){
-				if( !empty( $cmw['__exclude'] )){
-					foreach( $cmw['__exclude'] as $itemID ){
-						if( $itemID > 0 && isset( $this->_cmw_tree[ $itemID ] ) && $this->_cmw_tree[ $itemID ]['keep'] ){
-							$this->_cmw_tree[ $itemID ]['keep'] = false;
-							$this->_cmw_tree[0]['keepCount']--;
-						}
-					}
-					$continue = $this->_cmw_tree[0]['keepCount'] > 0;
-				}
-				if( $continue && !empty( $cmw['exclude_level'] ) && preg_match( '/^(\d+)(\+|-)?$/', $cmw['exclude_level'], $i ) > 0 ){
-					if( empty( $i[2] ) ){
-						$i = $i[1];
-						$j = $i + 1;
-					}elseif( $i[2] == '+' ){
-						$i = $i[1];
-						$j = count( $this->_cmw_levels );
-					}else{
-						$j = $i[1] + 1;
-						$i = 1;
-					}
-					while( $i > 0 && isset( $this->_cmw_levels[ $i ] ) && $i < $j ){
-						foreach( $this->_cmw_levels[ $i ] as $itemID ){
-							if( $this->_cmw_tree[ $itemID ]['keep'] ){
-								$this->_cmw_tree[ $itemID ]['keep'] = false;
-								$this->_cmw_tree[0]['keepCount']--;
-							}
-						}
-						$i++;
-					}
-					$continue = $this->_cmw_tree[0]['keepCount'] > 0;
-				}
+				$continue = $this->_cmw_run_exclusions( $cmw );
 			} //end EXCLUSIONS
 
 			//check for current item...

@@ -124,10 +124,10 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 		//set up some simple booleans for use at the disableif___ classes...
 		$isByItems = $instance['filter'] == 'items'; // disableif-ss (IS Items filter)
-		$isUnlimitedDepth = empty( $instance['depth'] ); // disableif-ud (IS unlimited depth)
+		$isUnlimitedDepth = $isByItems || empty( $instance['depth'] ); // disableif-ud (IS unlimited depth)
 		$isNotByBranch = $instance['filter'] != 'branch'; // disableifnot-br (is NOT Branch filter)
 		$isNotBranchCurrentItem = $isNotByBranch || !empty( $instance['branch'] ); // disableifnot-br-ci (is NOT "Branch:Current Item")
-		$isNotFallbackParentCurrent = !in_array( $instance['fallback'], array('parent', 'current') ); //disableifnot-fb-pc (is NOT set to fall back to parent or current)
+		$isNotFallbackParentCurrent = $isNotBranchCurrentItem || !in_array( $instance['fallback'], array('parent', 'current') ); //disableifnot-fb-pc (is NOT set to fall back to parent or current)
 
 		//NB the 'onchange' wrapper holds any text required by the "assist"
 ?>
@@ -185,137 +185,122 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		<?php $this->cmw_assist_link(); ?>
 		<strong><?php _e('Primary Filter'); ?></strong>
 
-		<br />
-		<label class="cmw-verticalalign-baseline">
-			<input id="<?php echo $this->get_field_id('filter'); ?>_0" class="cmw-bylevel cmw-listen"
-				<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('filter'); ?>" 
-				type="radio" value="" <?php checked( $instance['filter'], '' ); ?>
-				/><?php _e('Level:'); ?></label>
-		<select id="<?php echo $this->get_field_id('level'); ?>" class="cmw-level cmw-listen"
-				<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('level'); ?>">
-		<?php for( $i = 1, $j = $instance['level'] > $menus['selectedLevels'] ? 1 : $instance['level']; $i <= $menus['selectedLevels']; $i++ ){ ?>
-			<option value="<?php echo $i; ?>" <?php selected( $j, $i ); ?>><?php echo $i > 1 ? $i : $i . __(' (root)'); ?></option>
-		<?php } ?>
-		</select>
+		<div class="cmw-indented">
+			<label class="cmw-verticalalign-baseline">
+				<input id="<?php echo $this->get_field_id('filter'); ?>_0" class="cmw-bylevel cmw-listen"
+					<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('filter'); ?>" 
+					type="radio" value="" <?php checked( $instance['filter'], '' ); ?>
+					/><?php _e('Level:'); ?></label>
+			<select id="<?php echo $this->get_field_id('level'); ?>" class="cmw-level cmw-set-levels cmw-listen"
+					<?php $this->cmw_disableif(); ?> data-cmw-set-levels="0"
+					name="<?php echo $this->get_field_name('level'); ?>">
+			<?php for( $i = 1, $j = $instance['level'] > $menus['selectedLevels'] ? 1 : $instance['level']; $i <= $menus['selectedLevels']; $i++ ){ ?>
+				<option value="<?php echo $i; ?>" <?php selected( $j, $i ); ?>><?php echo $i > 1 ? $i : $i . __(' (root)'); ?></option>
+			<?php } ?>
+			</select>
+		</div>
 
-		<br />
-		<label class="cmw-verticalalign-baseline">
-			<input id="<?php echo $this->get_field_id('filter'); ?>_1" class="cmw-bybranch cmw-listen"
-				<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('filter'); ?>" 
-				type="radio" value="branch" <?php checked( $instance['filter'], 'branch' ); ?>
-				/><?php _e('Branch:'); ?></label>
-		<select id="<?php echo $this->get_field_id('branch'); ?>" class="cmw-branches cmw-assist-items cmw-listen"
-			<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('branch'); ?>">
-			<option value="0" <?php selected( $instance['branch'], 0 ); ?>><?php _e('Current Item'); ?></option>
-			<?php echo $menus['selectedOptgroup']; ?>
-		</select>
-		<select id="<?php echo $this->get_field_id('branch_ignore'); ?>" class='cmw-off-the-page' disabled="disabled"
-				name="<?php echo $this->get_field_name('branch_ignore'); ?>">
-			<?php echo $menus['optgroups']; ?>
-		</select>
+		<div class="cmw-indented">
+			<label class="cmw-verticalalign-baseline">
+				<input id="<?php echo $this->get_field_id('filter'); ?>_1" class="cmw-bybranch cmw-listen"
+					<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('filter'); ?>" 
+					type="radio" value="branch" <?php checked( $instance['filter'], 'branch' ); ?>
+					/><?php _e('Branch:'); ?></label>
+			<select id="<?php echo $this->get_field_id('branch'); ?>" class="cmw-branches cmw-assist-items cmw-listen"
+				<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('branch'); ?>">
+				<option value="0" <?php selected( $instance['branch'], 0 ); ?>><?php _e('Current Item'); ?></option>
+				<?php echo $menus['selectedOptgroup']; ?>
+			</select>
+			<select id="<?php echo $this->get_field_id('branch_ignore'); ?>" class='cmw-off-the-page' disabled="disabled"
+					name="<?php echo $this->get_field_name('branch_ignore'); ?>">
+				<?php echo $menus['optgroups']; ?>
+			</select>
+		</div>
 	
-		<br />
-		<label class="cmw-verticalalign-baseline">
-			<input id="<?php echo $this->get_field_id('filter'); ?>_2" class="cmw-byitems cmw-listen"
-				<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('filter'); ?>" 
-				type="radio" value="items" <?php checked( $instance['filter'], 'items' ); ?>
-				/><?php _e('Items:'); ?></label>
-		<?php $this->cmw_formfield_textbox( $instance, 'items',
-			array(
-				'fclass' => 'cmw-maxwidth-twothirds cmw-setitems cmw-listen'
-			) ); ?>
+		<div class="cmw-indented">
+			<label class="cmw-verticalalign-baseline">
+				<input id="<?php echo $this->get_field_id('filter'); ?>_2" class="cmw-byitems cmw-listen"
+					<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('filter'); ?>" 
+					type="radio" value="items" <?php checked( $instance['filter'], 'items' ); ?>
+					/><?php _e('Items:'); ?></label>
+			<?php $this->cmw_formfield_textbox( $instance, 'items',
+				array(
+					'fclass' => 'cmw-maxwidth-twothirds cmw-setitems cmw-listen'
+				) ); ?>
+		</div>
 	</div>
 
 	<div class="cmw-disableif-ss<?php $this->cmw_disableif( 'push', $isByItems ); ?>">
 		<?php $this->cmw_assist_link(); ?>
 		<strong><?php _e('Secondary Filter'); ?></strong>
 		
-		<br />
-		<label class="cmw-disableifnot-br<?php $this->cmw_disableif( 'push', $isNotByBranch ); ?>"><?php _e('Starting at:'); ?>
-			<select id="<?php echo $this->get_field_id('branch_start'); ?>" class="cmw-branch-start cmw-listen"
-					<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('branch_start'); ?>">
-				<optgroup label="<?php _e('relative...'); ?>" data-cmw-text-children="<?php _e('children'); ?>"
-						 data-cmw-text-parent="<?php _e('parent'); ?>">
-					<?php echo implode( '', $relGroup ); ?>
-				</optgroup>
-				<optgroup label="<?php _e('absolute...'); ?>">
-					<?php echo implode( '', $absGroup ); ?>
-				</optgroup>
-			</select></label><!-- end .cmw-disableifnot-br --><?php $this->cmw_disableif( 'pop' ); ?>
-
 		<div class="cmw-indented">
-			<label class="cmw-followed-by">
-				<input id="<?php echo $this->get_field_id('start_mode'); ?>_0" 
-					name="<?php echo $this->get_field_name('start_mode'); ?>"
-					<?php $this->cmw_disableif(); ?> type="radio" value="" <?php checked( $instance['start_mode'] !== 'level' ); ?>
-					/><?php printf( __('Item %1$s(if possible)%2$s'), '<small>', '</small>' ); ?></label>
-
-			<label class="cmw-whitespace-nowrap">
-				<input id="<?php echo $this->get_field_id('start_mode'); ?>_1" name="<?php echo $this->get_field_name('start_mode'); ?>"
-					<?php $this->cmw_disableif(); ?> type="radio" value="level" <?php checked( $instance['start_mode'] === 'level' ); ?>
-					/><?php _e('Level'); ?></label>
+			<label class="cmw-disableifnot-br<?php $this->cmw_disableif( 'push', $isNotByBranch ); ?>"><?php _e('Starting at:'); ?>
+				<select id="<?php echo $this->get_field_id('branch_start'); ?>" class="cmw-branch-start cmw-listen"
+						<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('branch_start'); ?>">
+					<optgroup label="<?php _e('relative...'); ?>" data-cmw-text-children="<?php _e('children'); ?>"
+							 data-cmw-text-parent="<?php _e('parent'); ?>">
+						<?php echo implode( '', $relGroup ); ?>
+					</optgroup>
+					<optgroup label="<?php _e('absolute...'); ?>">
+						<?php echo implode( '', $absGroup ); ?>
+					</optgroup>
+				</select></label><!-- end .cmw-disableifnot-br --><?php $this->cmw_disableif( 'pop' ); ?>
 
 			<br />
-			<?php $this->cmw_formfield_checkbox( $instance, 'allow_all_root',
-				array(
-					'label' => __('Allow all Root Items'),
-					'lclass' => 'cmw-disableifnot-br',
-					'disableif' => $isNotByBranch
-				) ); ?>
+			<span class="cmw-disableifnot-br<?php $this->cmw_disableif( 'push', $isNotByBranch ); ?>">
+				<label class="cmw-followed-by">
+					<input id="<?php echo $this->get_field_id('start_mode'); ?>_0" 
+						name="<?php echo $this->get_field_name('start_mode'); ?>"
+						<?php $this->cmw_disableif(); ?> type="radio" value="" <?php checked( $instance['start_mode'] !== 'level' ); ?>
+						/><?php printf( __('Item %1$s(if possible)%2$s'), '<small>', '</small>' ); ?></label>
+
+				<label class="cmw-followed-by cmw-whitespace-nowrap">
+					<input id="<?php echo $this->get_field_id('start_mode'); ?>_1" name="<?php echo $this->get_field_name('start_mode'); ?>"
+						<?php $this->cmw_disableif(); ?> type="radio" value="level" <?php checked( $instance['start_mode'] === 'level' ); ?>
+						/><?php _e('Level'); ?></label>
+
+				<?php $this->cmw_formfield_checkbox( $instance, 'allow_all_root',
+					array(
+						'label' => __('Allow all Root Items'),
+						'lclass' => 'cmw-whitespace-nowrap'
+					) ); ?>
+			</span><!-- end .cmw-disableifnot-br --><?php $this->cmw_disableif( 'pop' ); ?>
 		</div>
 
-		<label><?php _e('For Depth:'); ?>
-			<select id="<?php echo $this->get_field_id('depth'); ?>" data-cmw-text-levels="<?php _e('levels'); ?>"
-					<?php $this->cmw_disableif(); ?> class="cmw-depth cmw-listen" name="<?php echo $this->get_field_name('depth'); ?>">
-				<option value="0" <?php selected( $instance['depth'] > $menus['selectedLevels'] ? 0 : $instance['depth'], 0 ); ?>><?php _e('unlimited'); ?></option>
-				<?php for( $i = 1; $i <= $menus['selectedLevels']; $i++ ){ ?>
-				<option value="<?php echo $i; ?>" <?php selected( $instance['depth'], $i ); ?>><?php printf( _n('%d level', '%d levels', $i), $i ); ?></option>
-				<?php } ?>
-			</select></label>
-
 		<div class="cmw-indented">
+			<label class="cmw-followed-by"><?php _e('For Depth:'); ?>
+				<select id="<?php echo $this->get_field_id('depth'); ?>" data-cmw-text-levels="<?php _e(' levels'); ?>"
+						data-cmw-set-levels="1" <?php $this->cmw_disableif(); ?> 
+						class="cmw-depth cmw-set-levels cmw-listen" name="<?php echo $this->get_field_name('depth'); ?>">
+					<option value="0" <?php selected( $instance['depth'] > $menus['selectedLevels'] ? 0 : $instance['depth'], 0 ); ?>><?php _e('unlimited'); ?></option>
+					<?php for( $i = 1; $i <= $menus['selectedLevels']; $i++ ){ ?>
+					<option value="<?php echo $i; ?>" <?php selected( $instance['depth'], $i ); ?>><?php printf( _n('%d level', '%d levels', $i), $i ); ?></option>
+					<?php } ?>
+				</select></label>
+
+
 			<?php $this->cmw_formfield_checkbox( $instance, 'depth_rel_current',
-					array(
-						'label' => __('Relative to Current Item'),
-						'lclass' => 'cmw-disableif-ud',
-						'disableif' => $isUnlimitedDepth
-					) ); ?>
+				array(
+					'label' => __('Relative to Current Item'),
+					'lclass' => 'cmw-disableif-ud cmw-whitespace-nowrap',
+					'disableif' => $isUnlimitedDepth
+				) ); ?>
 		</div>
 	</div><!-- end .cmw-disableif-ss --><?php $this->cmw_disableif( 'pop' ); ?>
 
 	<div>
 		<?php $this->cmw_assist_link(); ?>
 		<strong><?php _e('Inclusions'); ?></strong>
-		<br />
-		<label class="cmw-disableifnot-br<?php $this->cmw_disableif( 'push', $isNotByBranch ); ?>"><?php _e('Branch Ancestors:'); ?>
-			<select id="<?php echo $this->get_field_id('ancestors'); ?>" class="cmw-ancestors cmw-listen"
-					<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('ancestors'); ?>"
-					data-cmw-text-tolevel="<?php _e('to level'); ?>">
-				<option value="0" <?php selected( $j, 0 ); ?>>&nbsp;</option>
-				<?php
-				$j = $instance['ancestors'];
-				$j = max( min( $j, $menus['selectedLevels'] - 1 ), 1 - $menus['selectedLevels'] ); ?>
-				<optgroup label="<?php _e('relative...'); ?>" data-cmw-text-for-option=" <?php _e('%d levels'); ?>">
-					<option value="-1" <?php selected( $j, -1 ); ?>><?php printf( __('%d level (parent)'), -1 ); ?></option>
-					<?php for( $i = -2; $i > 0 - $menus['selectedLevels']; $i-- ){ ?>
-					<option value="<?php echo $i; ?>" <?php selected( $j, $i ); ?>><?php printf(  __('%d levels'), $i ); ?></option>
-					<?php } ?>
-				</optgroup>
-				<optgroup label="<?php _e('absolute...'); ?>" data-cmw-text-for-option="<?php _e('to level %d'); ?> ">
-					<option value="1" <?php selected( $j, 1 ); ?>><?php printf( __('to level %d (root)'), 1 ); ?></option>
-					<?php for( $i = 2; $i < $menus['selectedLevels']; $i++ ){ ?>
-					<option value="<?php echo $i; ?>" <?php selected( $j, $i ); ?>><?php printf( __('to level %d'), $i ); ?></option>
-					<?php } ?>
-				</optgroup>
-			</select></label><!-- end .cmw-disableifnot-br --><?php $this->cmw_disableif( 'pop' ); ?>
 
-		<div class="cmw-indented cmw-disableifnot-br<?php $this->cmw_disableif( 'push', $isNotByBranch ); ?>">
-			<label><?php _e('... with Siblings:'); ?>
-				<select id="<?php echo $this->get_field_id('ancestor_siblings'); ?>" class="cmw-ancestor-siblings cmw-listen"
-						<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('ancestor_siblings'); ?>">
+		<div class="cmw-indented">
+			<label class="cmw-disableifnot-br<?php $this->cmw_disableif( 'push', $isNotByBranch ); ?>"><?php _e('Branch Ancestors:'); ?>
+				<select id="<?php echo $this->get_field_id('ancestors'); ?>" class="cmw-ancestors cmw-listen"
+						<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('ancestors'); ?>"
+						data-cmw-text-tolevel="<?php _e('to level'); ?>">
 					<option value="0" <?php selected( $j, 0 ); ?>>&nbsp;</option>
 					<?php
-					$j = $instance['ancestor_siblings'];
+					$j = $instance['ancestors'];
 					$j = max( min( $j, $menus['selectedLevels'] - 1 ), 1 - $menus['selectedLevels'] ); ?>
 					<optgroup label="<?php _e('relative...'); ?>" data-cmw-text-for-option=" <?php _e('%d levels'); ?>">
 						<option value="-1" <?php selected( $j, -1 ); ?>><?php printf( __('%d level (parent)'), -1 ); ?></option>
@@ -329,8 +314,32 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 						<option value="<?php echo $i; ?>" <?php selected( $j, $i ); ?>><?php printf( __('to level %d'), $i ); ?></option>
 						<?php } ?>
 					</optgroup>
-				</select></label>
-		</div><!-- end .cmw-disableifnot-br --><?php $this->cmw_disableif( 'pop' ); ?>
+				</select></label><!-- end .cmw-disableifnot-br --><?php $this->cmw_disableif( 'pop' ); ?>
+
+			<br />
+			<span class="cmw-disableifnot-br<?php $this->cmw_disableif( 'push', $isNotByBranch ); ?>">
+				<label><?php _e('... with Siblings:'); ?>
+					<select id="<?php echo $this->get_field_id('ancestor_siblings'); ?>" class="cmw-ancestor-siblings cmw-listen"
+							<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('ancestor_siblings'); ?>">
+						<option value="0" <?php selected( $j, 0 ); ?>>&nbsp;</option>
+						<?php
+						$j = $instance['ancestor_siblings'];
+						$j = max( min( $j, $menus['selectedLevels'] - 1 ), 1 - $menus['selectedLevels'] ); ?>
+						<optgroup label="<?php _e('relative...'); ?>" data-cmw-text-for-option=" <?php _e('%d levels'); ?>">
+							<option value="-1" <?php selected( $j, -1 ); ?>><?php printf( __('%d level (parent)'), -1 ); ?></option>
+							<?php for( $i = -2; $i > 0 - $menus['selectedLevels']; $i-- ){ ?>
+							<option value="<?php echo $i; ?>" <?php selected( $j, $i ); ?>><?php printf(  __('%d levels'), $i ); ?></option>
+							<?php } ?>
+						</optgroup>
+						<optgroup label="<?php _e('absolute...'); ?>" data-cmw-text-for-option="<?php _e('to level %d'); ?> ">
+							<option value="1" <?php selected( $j, 1 ); ?>><?php printf( __('to level %d (root)'), 1 ); ?></option>
+							<?php for( $i = 2; $i < $menus['selectedLevels']; $i++ ){ ?>
+							<option value="<?php echo $i; ?>" <?php selected( $j, $i ); ?>><?php printf( __('to level %d'), $i ); ?></option>
+							<?php } ?>
+						</optgroup>
+					</select></label>
+			</span><!-- end .cmw-disableifnot-br --><?php $this->cmw_disableif( 'pop' ); ?>
+		</div>
 
 		<?php $this->cmw_formfield_checkbox( $instance, 'siblings',
 			array(
@@ -339,34 +348,46 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				'disableif' => $isNotByBranch
 			) ); ?>
 
-		<br />
-		<?php $this->cmw_formfield_checkbox( $instance, 'include_root',
-			array(
-				'label' => __('All Root Items')
-			) ); ?>
+		<div class="cmw-indented">
+			<label><?php _e('Level:'); ?>
+				<select id="<?php echo $this->get_field_id('include_level'); ?>" class="cmw-include-level"
+					name="<?php echo $this->get_field_name('include_level'); ?>">
+					<?php $j = intval($instance['include_level']) > $menus['selectedLevels'] ? '' : $instance['include_level']; ?>
+					<option value="" <?php selected( $j, '' ); ?>>&nbsp;</option>
+					<?php for( $i = 1; $i <= $menus['selectedLevels']; $i++ ){ ?>
+					<option value="<?php echo $i; ?>" <?php selected( $j, "$i" ); ?>><?php echo $i; ?></option>
+					<option value="<?php echo $i . '-'; ?>" <?php selected( $j, $i . '-' ); ?>>&nbsp;&nbsp;&nbsp;<?php echo $i . __(' and above'); ?></option>
+					<option value="<?php echo $i . '+'; ?>" <?php selected( $j, $i . '+' ); ?>>&nbsp;&nbsp;&nbsp;<?php echo $i . __(' and below'); ?></option>
+					<?php } ?>
+				</select></label>
+		</div>
 	</div>
 
 	<div>
 		<?php $this->cmw_assist_link(); ?>
 		<strong><?php _e('Exclusions'); ?></strong>
-		<br />
-		<?php $this->cmw_formfield_textbox( $instance, 'exclude',
-			array(
-				'label' => __('Item Ids:'),
-				'fclass' => 'cmw-maxwidth-twothirds cmw-exclusions'
-			) ); ?>
-		<br />
-		<label><?php _e('By Level:'); ?>
-			<select id="<?php echo $this->get_field_id('exclude_level'); ?>" class="cmw-exclude-level"
-				name="<?php echo $this->get_field_name('exclude_level'); ?>">
-				<?php $j = intval($instance['exclude_level']) > $menus['selectedLevels'] ? '' : $instance['exclude_level']; ?>
-				<option value="" <?php selected( $j, '' ); ?>>&nbsp;</option>
-				<?php for( $i = 1; $i <= $menus['selectedLevels']; $i++ ){ ?>
-				<option value="<?php echo $i; ?>" <?php selected( $j, "$i" ); ?>><?php echo $i; ?></option>
-				<option value="<?php echo $i . '-'; ?>" <?php selected( $j, $i . '-' ); ?>>&nbsp;&nbsp;&nbsp;<?php echo $i . __(' and above'); ?></option>
-				<option value="<?php echo $i . '+'; ?>" <?php selected( $j, $i . '+' ); ?>>&nbsp;&nbsp;&nbsp;<?php echo $i . __(' and below'); ?></option>
-				<?php } ?>
-			</select></label>
+
+		<div class="cmw-indented">
+			<?php $this->cmw_formfield_textbox( $instance, 'exclude',
+				array(
+					'label' => __('Item Ids:'),
+					'fclass' => 'cmw-maxwidth-twothirds cmw-exclusions'
+				) ); ?>
+		</div>
+
+		<div class="cmw-indented">
+			<label><?php _e('Level:'); ?>
+				<select id="<?php echo $this->get_field_id('exclude_level'); ?>" class="cmw-exclude-level"
+					name="<?php echo $this->get_field_name('exclude_level'); ?>">
+					<?php $j = intval($instance['exclude_level']) > $menus['selectedLevels'] ? '' : $instance['exclude_level']; ?>
+					<option value="" <?php selected( $j, '' ); ?>>&nbsp;</option>
+					<?php for( $i = 1; $i <= $menus['selectedLevels']; $i++ ){ ?>
+					<option value="<?php echo $i; ?>" <?php selected( $j, "$i" ); ?>><?php echo $i; ?></option>
+					<option value="<?php echo $i . '-'; ?>" <?php selected( $j, $i . '-' ); ?>>&nbsp;&nbsp;&nbsp;<?php echo $i . __(' and above'); ?></option>
+					<option value="<?php echo $i . '+'; ?>" <?php selected( $j, $i . '+' ); ?>>&nbsp;&nbsp;&nbsp;<?php echo $i . __(' and below'); ?></option>
+					<?php } ?>
+				</select></label>
+		</div>
 	</div>
 
 	<div>
@@ -395,32 +416,36 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	<div class="cmw-disableifnot-br-ci<?php $this->cmw_disableif( 'push', $isNotBranchCurrentItem ); ?>">
 		<?php $this->cmw_assist_link(); ?>
 
-		<label for="<?php echo $this->get_field_id('fallback'); ?>"><?php _e('If Current Item has no children:'); ?></label>
-		<select id="<?php echo $this->get_field_id('fallback'); ?>" class="cmw-fallback cmw-listen"
-				<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('fallback'); ?>">
-			<option value="" <?php selected( $instance['fallback'], '' ); ?>>&nbsp;</option>
-			<option value="parent" <?php selected( $instance['fallback'], 'parent' ); ?>><?php _e('Start at : -1 (parent)'); ?></option>
-			<option value="current" <?php selected( $instance['fallback'], 'current' ); ?>><?php _e('Start at : the Current Item'); ?></option>
-			<option value="quit" <?php selected( $instance['fallback'], 'quit' ); ?>><?php _e('No output!'); ?></option>
-		</select>
-
-		<div class="cmw-indented cmw-disableifnot-fb-pc<?php $this->cmw_disableif( 'push', $isNotFallbackParentCurrent ); ?>">
-			<?php $this->cmw_formfield_checkbox( $instance, 'fallback_siblings',
-				array(
-					'label' => '&hellip;' . __('and Include its Siblings')
-				) ); ?>
+		<div class="cmw-indented">
+			<label for="<?php echo $this->get_field_id('fallback'); ?>"><?php _e('If Current Item has no children:'); ?></label>
+			<select id="<?php echo $this->get_field_id('fallback'); ?>" class="cmw-fallback cmw-listen"
+					<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('fallback'); ?>">
+				<option value="" <?php selected( $instance['fallback'], '' ); ?>>&nbsp;</option>
+				<option value="parent" <?php selected( $instance['fallback'], 'parent' ); ?>><?php _e('Start at : -1 (parent)'); ?></option>
+				<option value="current" <?php selected( $instance['fallback'], 'current' ); ?>><?php _e('Start at : the Current Item'); ?></option>
+				<option value="quit" <?php selected( $instance['fallback'], 'quit' ); ?>><?php _e('No output!'); ?></option>
+			</select>
 
 			<br />
-			<label><?php _e('For Depth:'); ?>
-				<select id="<?php echo $this->get_field_id('fallback_depth'); ?>" data-cmw-text-levels="<?php _e('levels'); ?>"
-						<?php $this->cmw_disableif(); ?> class="cmw-fallback-depth" name="<?php echo $this->get_field_name('fallback_depth'); ?>">
-					<option value="0" <?php selected( $instance['fallback_depth'] > $menus['selectedLevels'] ? 0 : $instance['fallback_depth'], 0 ); ?>>&nbsp;</option>
-	<?php for( $i = 1; $i <= $menus['selectedLevels']; $i++ ){ ?>
-					<option value="<?php echo $i; ?>" <?php selected( $instance['fallback_depth'], $i ); ?>><?php printf( _n('%d level', '%d levels', $i), $i ); ?></option>
-	<?php } ?>
-				</select></label>
-			<span class="cmw-small-block"><em class="cmw-colour-grey"><?php _e('Fallback Depth is Relative to Current Item!'); ?></em></span>
-		</div><!-- end .cmw-disableifnot-fb-pc --><?php $this->cmw_disableif( 'pop' ); ?>
+			<span class="cmw-disableifnot-fb-pc<?php $this->cmw_disableif( 'push', $isNotFallbackParentCurrent ); ?>">
+				<?php $this->cmw_formfield_checkbox( $instance, 'fallback_siblings',
+					array(
+						'label' => '&hellip;' . __('and Include its Siblings')
+					) ); ?>
+
+				<br />
+				<label><?php _e('For Depth:'); ?>
+					<select id="<?php echo $this->get_field_id('fallback_depth'); ?>" data-cmw-text-levels="<?php _e(' levels'); ?>"
+							data-cmw-set-levels="1" <?php $this->cmw_disableif(); ?> 
+							class="cmw-set-levels" name="<?php echo $this->get_field_name('fallback_depth'); ?>">
+						<option value="0" <?php selected( $instance['fallback_depth'] > $menus['selectedLevels'] ? 0 : $instance['fallback_depth'], 0 ); ?>>&nbsp;</option>
+						<?php for( $i = 1; $i <= $menus['selectedLevels']; $i++ ){ ?>
+						<option value="<?php echo $i; ?>" <?php selected( $instance['fallback_depth'], $i ); ?>><?php printf( _n('%d level', '%d levels', $i), $i ); ?></option>
+						<?php } ?>
+					</select></label>
+				<span class="cmw-small-block cmw-indented"><em class="cmw-colour-grey"><?php _e('Fallback Depth is Relative to Current Item!'); ?></em></span>
+			</span><!-- end .cmw-disableifnot-fb-pc --><?php $this->cmw_disableif( 'pop' ); ?>
+		</div>
 
 	</div><!-- end .cmw-disableifnot-br-ci --><?php $this->cmw_disableif( 'pop' ); ?>
 
@@ -448,30 +473,33 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 	<div>
 		Set Title from:
-		<br>
-		<?php $this->cmw_formfield_checkbox( $instance, 'title_from_current',
-			array(
-				'label' => __('Current Item'),
-				'lclass' => 'cmw-followed-by'
-			) ); ?>
-		<?php $this->cmw_formfield_checkbox( $instance, 'title_from_current_root',
-			array(
-				'label' => '&hellip;' . __('or its Root'),
-				'lclass' => 'cmw-whitespace-nowrap'
-			) ); ?>
-		<br />
-		<?php $this->cmw_formfield_checkbox( $instance, 'title_from_branch',
-			array(
-				'label' => __('Branch'),
-				'lclass' => 'cmw-followed-by cmw-disableifnot-br',
-				'disableif' => $isNotByBranch
+
+		<div class="cmw-indented">
+			<?php $this->cmw_formfield_checkbox( $instance, 'title_from_current',
+				array(
+					'label' => __('Current Item'),
+					'lclass' => 'cmw-followed-by'
 				) ); ?>
-		<?php $this->cmw_formfield_checkbox( $instance, 'title_from_branch_root',
-			array(
-				'label' => '&hellip;' . __('or its Root'),
-				'lclass' => 'cmw-whitespace-nowrap cmw-disableifnot-br',
-				'disableif' => $isNotByBranch
-			) ); ?>
+			<?php $this->cmw_formfield_checkbox( $instance, 'title_from_current_root',
+				array(
+					'label' => '&hellip;' . __('or its Root'),
+					'lclass' => 'cmw-whitespace-nowrap'
+				) ); ?>
+		</div>
+		<div class="cmw-indented">
+			<?php $this->cmw_formfield_checkbox( $instance, 'title_from_branch',
+				array(
+					'label' => __('Branch'),
+					'lclass' => 'cmw-followed-by cmw-disableifnot-br',
+					'disableif' => $isNotByBranch
+					) ); ?>
+			<?php $this->cmw_formfield_checkbox( $instance, 'title_from_branch_root',
+				array(
+					'label' => '&hellip;' . __('or its Root'),
+					'lclass' => 'cmw-whitespace-nowrap cmw-disableifnot-br',
+					'disableif' => $isNotByBranch
+				) ); ?>
+		</div>
 	</div>
 
 	<div>
@@ -603,6 +631,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 	<?php $this->cmw_close_a_field_section(); ?>
 		
+	<div class="cmw-shortcode-nojs cmw-small-block"><?php _e('With Javascript disabled, the shortcode below is only guaranteed to be accurate when you <em>initially enter</em> Edit mode!'); ?></div>
 	<div class="cmw-shortcode-wrap"><code class="widget-<?php echo $this->id_base; ?>-shortcode ui-corner-all" 
 		title="<?php _e('shortcode'); ?>"><?php echo $this->cmw_shortcode( array_merge( $instance, array( 'menu' => $menus['selectedMenu'] ) ) ); ?></code></div>
 
@@ -610,9 +639,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 <?php
 
 		if( $this->_cmw_accessibility ){
-?>
-<script type="text/javascript">jQuery(function($){ $('#<?php echo $this->get_field_id('menu'); ?>').trigger('change'); });</script>
-<?php
+			wp_localize_script( Custom_Menu_Wizard_Plugin::$script_handle, __CLASS__, array( 'trigger' => '#' . $this->get_field_id('menu') ) );
 		}
 
 	} //end form()
@@ -1193,7 +1220,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				'flat_output'                       => 0,
 				'hide_title'                        => 0,
 				'siblings'                          => 0, //v3.0.0 replaces include_parent_siblings
-				'include_root'                      => 0, //v3.0.0
+				'include_root'                      => 0, //v3.0.0 ; v3.0.4 replaced/expanded by include_level DEPRECATED
 				'title_from_branch'                 => 0, //v3.0.0 replaces title_from_parent
 				'title_from_branch_root'            => 0, //v3.0.0 added
 				'title_from_current'                => 0,
@@ -1245,6 +1272,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				'container_class'   => '',
 				'exclude_level'     => '',  //v3.0.0 (1 or more digits, possibly with an appended '-' or '+')
 				'fallback'          => '',  //v3.0.0 replace fallback_no_children ('', 'parent', 'current', 'quit')
+				'include_level'     => '',  //v3.0.4 (1 or more digits, possibly with an appended '-' or '+')
 				'menu_class'        => 'menu-widget',
 				'widget_class'      => '',
 				'cmwv'              => ''
@@ -1307,6 +1335,13 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				unset( $instance[ "_$k" ] );
 			}
 		}
+
+		//v3.0.4 : v3.0.* back compat...
+		//include_root was a boolean, but has been replaced with include_level, and the equiv. of include_root On is include_level=1...
+		if( $instance['include_root'] && empty( $instance['include_level'] ) ){
+			$instance['include_level'] = '1';
+		}
+		unset( $instance['include_root'] );
 
 		//holds information determined by the walker...
 		$this->_cmw_walker = array();
@@ -1386,6 +1421,10 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				$args['ancestor_siblings'] = $instance['ancestor_siblings'];
 			}
 		}
+		//inclusions by level...
+		if( !empty( $instance['include_level'] ) ){
+			$args['include_level'] = array( $instance['include_level'] );
+		}
 		//exclusions by id...
 		if( !empty( $instance['_exclude'] ) ){
 			$args['exclude'] = $instance['_exclude'];
@@ -1410,7 +1449,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			$args['title_from'] = $n;
 		}
 		//switches...
-		foreach( array('allow_all_root', 'siblings', 'include_root', 'flat_output', 'ol_root', 'ol_sub') as $n ){
+		foreach( array('allow_all_root', 'siblings', 'flat_output', 'ol_root', 'ol_sub') as $n ){
 			if( $instance[ $n ] ){
 				$args[ $n ] = 1;
 			}
@@ -1601,7 +1640,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 	<p class="cmw-disableif-ss<?php $this->cmw_disableif( 'push', $isShowSpecific ); ?>">
 		<label for="<?php echo $this->get_field_id('depth'); ?>"><?php _e('For Depth:'); ?></label>
-		<select id="<?php echo $this->get_field_id('depth'); ?>" class="cmw-depth" data-cmw-text-levels="<?php _e('levels'); ?>"
+		<select id="<?php echo $this->get_field_id('depth'); ?>" class="cmw-depth" data-cmw-text-levels="<?php _e(' levels'); ?>"
 				name="<?php echo $this->get_field_name('depth'); ?>" <?php $this->cmw_disableif(); ?>>
 			<option value="0" <?php selected( $instance['depth'] > $menus['selectedLevels'] ? 0 : $instance['depth'], 0 ); ?>><?php _e('unlimited'); ?></option>
 <?php

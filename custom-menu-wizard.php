@@ -3,13 +3,19 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 3.0.3
+ * Version: 3.0.4
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 defined( 'ABSPATH' ) or exit();
 /*
+ * v3.0.4 change log
+ * - fixed bug in the display of the "No Current Item!" warning in the "assist"
+ * - corrected the enabling/disabling of a couple of fields in the widget form, and tweaked the indentation for better responsiveness
+ * - fixed a bug with accessibility mode when javascript is enabled, and added a warning about the accuracy of the shortcode when javascript is disabled
+ * - extended the All Root Items inclusion to be a selectable number of levels (as per the Exclusions by Level)
+ * 
  * v3.0.3 change log
  * - removed all occurrences of "Plugin " followed by "Name" from everywhere except the main plugin file (this one!) to avoid update() incorrectly reporting "invalid header" when activating straight from installation (rather than from the Plugin admin page)
  * - tweak : eliminate the over-use of get_title() when determining the widget title
@@ -126,7 +132,8 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 	//declare the main plugin class...
 	class Custom_Menu_Wizard_Plugin {
 		
-		public static $version = '3.0.3';
+		public static $version = '3.0.4';
+		public static $script_handle = 'custom-menu-wizard-plugin-script';
 		protected static $instance;
 		
 		/**
@@ -136,6 +143,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 
 			add_action( 'widgets_init', array( &$this, 'widget_and_shortcode' ) );
 			add_action( 'wp_ajax_cmw-find-shortcodes', array( &$this, 'ajax_find_shortcodes' ) );
+			add_action( 'admin_enqueue_scripts', array( &$this, 'register_scripts' ) );
 			add_action( 'admin_print_styles-widgets.php', array( &$this, 'enqueue_styles' ) );
 			add_action( 'admin_print_scripts-widgets.php', array( &$this, 'enqueue_scripts' ) );
 			add_action( 'admin_menu', array( &$this, 'admin_menu' ) );
@@ -169,8 +177,8 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 		 */
 		public function enqueue_scripts(){
 
-			$min = defined( 'WP_DEBUG' ) && WP_DEBUG ? '' : '.min';
-			wp_enqueue_script( 'custom-menu-wizard-plugin-script', plugins_url( "/custom-menu-wizard$min.js", __FILE__ ), array('jquery-ui-dialog'), self::$version, true );
+			//script is pre-registered - see this->register_scripts() - so that it can be localized if need be (like for accessibility mode)
+			wp_enqueue_script( self::$script_handle );
 			
 		} //end enqueue_scripts()
 		
@@ -192,7 +200,17 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 			wp_enqueue_style( 'jquery-ui' );
 			
 		} //end enqueue_styles()
-		
+
+		/**
+		 * hooked into admin_enqueue_scripts : registers the plugin script
+		 */
+		public function register_scripts(){
+
+			$min = defined( 'WP_DEBUG' ) && WP_DEBUG ? '' : '.min';
+			wp_register_script( self::$script_handle, plugins_url( "/custom-menu-wizard$min.js", __FILE__ ), array('jquery-ui-dialog'), self::$version, true );
+
+		}	//end register_scripts()
+
 		/**
 		 * hooked into in_plugin_update_message-custom-menu-wizard action : request read changelog before updating
 		 * @param array $plugin_data Plugin metadata
@@ -387,12 +405,14 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 		 *   deprecated:
 		 *   - children_of : now branch, and limited to current[-item] or digits; parent|current-parent|root|current-ancestor all require conversion
 		 *   - start_level : now level (integer) for a by-level filter, or start_at (string) for a by-branch filter (determining branch_start)
+		 *   - include_root : (as of v3.0.4) replaced by include_level (like exclude_level); include_root On equiv. is include_level == '1'
 		 *   changed:
 		 *   - contains_current : was a switch, now a string (empty or menu|primary|secondary|output); switch ON = 'output'
 		 *   - include : now accepts siblings, ancestors and/or ancestor-siblings (csv); parent is gone, and hyphen separator no longer allowed
 		 *   - title_from : should now be csv, hyphen separator no longer allowed
 		 *   added:
 		 *   - title_tag & findme
+		 *   - include_level (v3.0.4)
 		 * 
 		 * default (ie. no options) is:
 		 *  - show all
@@ -434,7 +454,8 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 				//inclusions...
 				'ancestors'           => 0, //integer (negative = relative)
 				'ancestor_siblings'   => 0, //integer (negative = relative)
-				'include_root'        => 0, //switch (means *all* root items!)
+				'include_root'        => 0, //switch (means *all* root items!) v3.0.4 DEPRECATED still allowed (for back compat.), equiv. is include_level='1'
+				'include_level'       => '', // v3.0.4 digit, possibly appended with a '+' or '-', eg. '2', '2+', or '2-'
 				'siblings'            => 0, //switch
 				//exclusions...
 				'exclude'             => '', // csv of menu item ids (an id may have a '+' appended, for inheritance, eg. '23+')
@@ -537,6 +558,12 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 			}
 
 			if( $ok ){
+				//include_level, and the deprecated include_root switch...
+				//if level is empty but root is set, set include_level to '1'...
+				if( empty( $instance['include_level'] ) && $instance['include_root'] ){
+					$instance['include_level'] = '1';
+				}
+				unset( $instance['include_root'] );
 				//fallback => fallback and fallback_siblings and fallback_depth...
 				//allows "X", "X,Y" or "X,Y,Z" where comma could be space, and X|Y|Z could be "quit"|"current"|"parent", or "+siblings", or digit(s)
 				//but "quit", "current" or "parent" must be present (others are optional)
