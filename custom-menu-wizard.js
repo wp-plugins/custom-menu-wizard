@@ -7,6 +7,11 @@
 jQuery(function($){
 	'use strict';
 	var cmwAssist,
+			//only test for : key="value", key='value' and key=value...
+			parseSwitchTo = /(\w+)\s*=\s*"([^"]*)"(?:\s|$)|(\w+)\s*=\s*\'([^\']*)\'(?:\s|$)|(\w+)\s*=\s*([^\s\'"]+)(?:\s|$)/g,
+			isNumeric = function(x){
+				return (/^[+\-]?\d+$/).test(x.toString());
+			},
 			widgetCustomMenuWizardClass = function(suffix, dot){
 				return (!dot ? '' : '.') + 'widget-custom-menu-wizard-' + suffix;
 			},
@@ -25,6 +30,260 @@ jQuery(function($){
 					cmwAssist.update(e ? e.target : this);
 				}
 			}, //end assistance()
+	/**
+	 * gets the widget's field values, or their equivalents from an alternative set
+	 * @param {object|boolean} oc jQuery of the widget's onchange wrapper (false if alts are supplied)
+	 * @param {object} alts Optional parsed set of alternative field settings
+	 * @return {object} key=>value pairs of the field element values 
+	 */
+			getSettings = function(oc, altFields){
+				var useAlternative = oc === false,
+						ocd = useAlternative ? {} : oc.data(),
+						settings = {},
+						legacyVersion = !useAlternative && ocd.cmwDialogVersion === '2.1.0',
+						csv = {items:1, exclude:1},
+						keepAsString = $.extend({branch_start:1, exclude_level:1, include_level:1}, csv);
+				$.each(useAlternative ? altFields : oc.find(':input').serializeArray(), function(i, v){
+					var name = v.name.replace(/.*\[([^\]]+)\]$/, '$1'),
+							val = !keepAsString[name] && /^-?\d+$/.test(v.value) ? parseInt(v.value, 10) : v.value;
+					settings[name] = val;
+					if(name === 'hide_empty'){
+						settings[name] = useAlternative || !!ocd.cmwV36plus || val;
+					}else if(csv[name]){
+						settings['_' + name + '_sep'] = !val || /(^\d+\+?$|,)/.test($.trim(val)) ? ',' : ' ';
+						val = $.map(val.split(/[,\s]+/), function(x){
+							var inherit = !legacyVersion && /\+$/.test(x);
+							x = x ? parseInt(x, 10) : 0;
+							return isNaN(x) || x < 1 ? null : (inherit ? x + '+' : x);
+						});
+						settings['_' + name] = val.join(settings['_' + name + '_sep']);
+					}
+				});
+				return settings;
+			}, //end getSettings()
+	/**
+	 * checks for switching to the alternative settings (v3.1.0)
+	 * @param {string} at Processing stage
+	 * @param {boolean} hasCurrent Current Item is in items
+	 * @param {integer} itemsLength Items length
+	 * @param {array} settings Current settings
+	 * @return {boolean} True if should switch to alternative settings
+	 */
+			alternativeCheckFor = function(at, hasCurrent, itemsLength, settings){
+				var switchIf = settings.switch_if;
+				return (settings.switch_at === at && (
+						( switchIf === 'current' && hasCurrent ) ||
+						( switchIf === 'no-current' && !hasCurrent ) ||
+						( switchIf === 'no-output' && !itemsLength )
+						) );
+			}, //end alternativeCheckFor()
+	/**
+	 * takes a switch_to setting, parses it, and returns settings (equiv. Custom_Menu_Wizard_Plugin->shortcode_instance())
+	 * @param {string} switchTo switch_to value
+	 * @param {object} themenu jQuery of demo menu structure (.cmw-demo-themenu-ul)
+	 * @return {object} Settings, or False if can't be determined
+	 */
+			alternativeParse = function(switchTo, themenu){
+				switchTo = $.trim(switchTo || '');
+				var alts = {
+							'title'             : '',
+							'level'             : 1, //default setting
+							'branch'            : 0,
+							'items'             : '',
+							'depth'             : 0,
+							'depth_rel_current' : 0,
+							'start_at'          : '',
+							'start_mode'        : '',
+							'allow_all_root'    : 0,
+							'ancestors'         : 0,
+							'ancestor_siblings' : 0,
+							'include_root'      : 0,
+							'include_level'     : '',
+							'siblings'          : 0,
+							'exclude'           : '',
+							'exclude_level'     : '',
+							'contains_current'  : '',
+							'fallback'          : '',
+							'flat_output'       : 0,
+							'title_from'        : '',
+							'ol_root'           : 0,
+							'ol_sub'            : 0
+						},
+						attribute = parseSwitchTo.exec(switchTo),
+						attr = {},
+						i = 0,
+						byItems, byBranch, byLevel, n;
+				while(attribute){
+					i++;
+					// key = "value" [1] [2] ...
+					if(attribute[1]){
+						attr[ attribute[1] ] = attribute[2];
+					// key = 'value' [3] [4] ...
+					}else if(attribute[3]){
+						attr[ attribute[3] ] = attribute[4];
+					// key = value   [5] [6] ...
+					}else if(attribute[5]){
+						attr[ attribute[5] ] = attribute[6];
+					}else{
+						i--;
+					}
+					attribute = parseSwitchTo.exec(switchTo);
+				}
+				if(i){
+					for(n in attr){
+						if(alts.hasOwnProperty(n)){
+							alts[n] = attr[n];
+						}
+					}
+				}
+
+				//in order of priority...
+				byItems = !!alts.items;
+				byBranch = !byItems && !!alts.branch;
+				byLevel = !byItems && !byBranch;
+
+				if(byItems){
+					alts.filter = 'items';
+				}
+				if(byBranch){
+					alts.filter = 'branch';
+					n = alts.start_at.toString();
+					//default...
+					alts.branch_start = n;
+					//override...
+					if(n === '0' || n === 'branch'){
+						alts.branch_start = '';
+					}
+					if(n === 'root'){
+						alts.branch_start = '1';
+					}
+					if(n === 'children'){
+						alts.branch_start = '+1';
+					}
+					if(n === 'parent'){
+						alts.branch_start = '-1';
+					}
+					if(alts.branch === 'current' || alts.branch === 'current-item'){
+						alts.branch = 0;
+					}else if( !isNumeric( alts.branch ) ){
+						//if branch is non-numeric then it could be the title of a menu item, but we need it to be the menu item's id...
+						//NB : if branch *is* numeric, but the item id is not within this menu, then ... tough! Basically, this assist mimics what
+						//     the widget does, and the widget doesn't check numeric branch values until it gets into the walker - at which point
+						//     it either produces the relevant output or doesn't. only if branch is non-numeric and possibly an item title does 
+						//     the widget pre-check for it being in the menu (because the walker requires an item id) : so this does the same.
+						alts.branch = alts.branch.toLowerCase();
+						n = themenu.find('a.cmw-item').filter(function(){
+							return $(this).text().toLowerCase() === alts.branch;
+						});
+						if(n.length){
+							alts.branch = n.parent().data('itemid');
+						}else{
+							//COP OUT!
+							return false;
+						}
+					}
+				}
+				if(byLevel){
+					alts.filter = '';
+					alts.level = Math.max(1, parseInt(alts.level, 10));
+				}
+				alts.start_at = null;
+
+				//include_level, and the deprecated include_root switch...
+				//if level is empty but root is set, set include_level to '1'...
+				if( !alts.include_level && alts.include_root === '1' ){
+					alts.include_level = '1';
+				}
+				alts.include_root = null;
+				//fallback => fallback and fallback_siblings and fallback_depth...
+				//allows "X", "X,Y" or "X,Y,Z" where comma could be space, and X|Y|Z could be "quit"|"current"|"parent", or "+siblings", or digit(s)
+				//but "quit", "current" or "parent" must be present (others are optional)
+				if(byBranch && !alts.branch && alts.fallback ){
+					attr = alts.fallback.toLowerCase().split(/[\s,]+/);
+					n = ' ' + attr.join(' ') + ' ';
+					alts.fallback = '';
+					if(n.indexOf(' quit ') >= 0){
+						alts.fallback = 'quit';
+					}else if(n.indexOf(' parent ') >= 0){
+						alts.fallback = 'parent';
+					}else if(n.indexOf(' current ') >= 0){
+						alts.fallback = 'current';
+					}
+					if(alts.fallback !== '' && alts.fallback !== 'quit'){
+						if( n.indexOf(' +siblings ') >= 0){
+							alts.fallback_siblings = 1;
+						}
+						for(i = 0; i < attr.length; i++){
+							if(/^\d+$/.test(attr[i])){
+								n = parseInt(attr[i], 10);
+								if(n > 0){
+									alts.fallback_depth = n;
+									break;
+								}
+							}
+						}
+					}
+				}
+				//title_from => title_from_...
+				if(alts.title_from){
+					attr = alts.title_from.toLowerCase().split(/[\s,]+/);
+					for(i = 0; i < attr.length; i++){
+						if(attr[i] === 'branch' || attr[i] === 'current'){
+							alts['title_from_' + attr[i]] = 1;
+						}else if(attr[i] === 'branch-root' || attr[i] === 'current-root'){
+							alts['title_from_' + attr[i].replace('-', '_')] = 1;
+						}
+					}
+				}
+				alts.title_from = null;
+				alts.hide_empty = 1;
+				
+				return getSettings( false, $.map(alts, function(v, k){ return v === null ? v : {name:k, value:v}; }) );
+			}, //end alternativeParse()
+	/**
+	 * strips an alternative settings shortcode down to its bare essentials (v3.1.0)
+	 * @param {string} x The alternative
+	 * @return {string}
+	 */
+			alternativeStripDown = function(x){
+				var rtn = '';
+				if(!!x){
+					//remove tabs, CRLFs, containing square brackets, self-terminator and spaces, then split on square bracket, taking first element...
+					rtn = x.replace(/[\r\n\t]+/g, ' ').replace(/^[\[\s]+/, '').replace(/[\s\/\]]+$/, '').split(/[\[\]]/)[0];
+					//trim trailing slash, surrounding spaces, and append a space...
+					rtn = $.trim(rtn.replace(/\/+$/, '')) + ' ';
+					//remove leading cmwizard, any occurrence of menu=something, and any occurrence of alternative="something" (optional quotes)...
+					rtn = $.trim( (' ' + rtn.replace(/^cmwizard\s/, '') + ' ').replace(/\smenu=[^\s]*\s/, ' ').replace(/\salternative=("[^"]*"|[^\s]*)\s/, ' ') );
+					//remove multiple spaces...
+					rtn = rtn.replace(/\s\s+/g, ' ');
+				}
+				return rtn;
+			},
+	/**
+	 * retrieves alternative settings
+	 * @param {array} settings Current settings
+	 * @param {object} dialog jQuery of dialog
+	 * @return {boolean|array} Alternative settings
+	 */
+			alternativeUse = function(settings, dialog){
+				//alt settings are cached in the data of the menu display (which gets reconstructed when menu id changes)
+				var themenu = dialog.find('.cmw-demo-themenu-ul'),
+						dataStore = themenu.data(),
+						altCode = alternativeStripDown( settings.switch_to );
+				altCode = 'cmwizard menu=' + settings.menu + (altCode === '' ? altCode : ' ' + altCode);
+
+				//if don't have cached code, or the code has changed, get new set...
+				if(!dataStore.altCode || dataStore.altCode !== altCode){
+					dataStore.altCode = altCode;
+					dataStore.altSettings = alternativeParse(altCode, themenu);
+				}
+				//show that we are - or should be - using the alternative settings...
+				dialog.find('.cmw-demo-alternative').addClass('updated')
+					//...but if they're bad settings (from a bad switch_to code?) then show as an error...
+					.toggleClass('error', dataStore.altSettings === false);
+
+				return dataStore.altSettings === false ? false : $.extend({}, dataStore.altSettings);
+			}, //end alternativeUse()
 	/**
 	 * sets the tick or cross classes and returns a filtered set of the items that *are* ticked/crossed
 	 * @param {object} items jQuery of elements to filter
@@ -94,34 +353,6 @@ jQuery(function($){
 				}
 				return rtn.join(',');
 			},
-	/**
-	 * gets the widget's field values
-	 * @param {object} oc jQuery of the widget's onchange wrapper
-	 * @return {object} key=>value pairs of the field element values 
-	 */
-			getSettings = function(oc){
-				var settings = {},
-						legacyVersion = oc.data('cmwDialogVersion') === '2.1.0',
-						csv = {items:1, exclude:1},
-						keepAsString = $.extend({branch_start:1, exclude_level:1, include_level:1}, csv);
-				$.each(oc.find(':input').serializeArray(), function(i, v){
-					var name = v.name.replace(/.*\[([^\]]+)\]$/, '$1'),
-							val = !keepAsString[name] && /^-?\d+$/.test(v.value) ? parseInt(v.value, 10) : v.value;
-					settings[name] = val;
-					if(name === 'hide_empty'){
-						settings[name] = !!oc.data().cmwV36plus || val;
-					}else if(csv[name]){
-						settings['_' + name + '_sep'] = !val || /(^\d+\+?$|,)/.test($.trim(val)) ? ',' : ' ';
-						val = $.map(val.split(/[,\s]+/), function(x){
-							var inherit = !legacyVersion && /\+$/.test(x);
-							x = x ? parseInt(x, 10) : 0;
-							return isNaN(x) || x < 1 ? null : (inherit ? x + '+' : x);
-						});
-						settings['_' + name] = val.join(settings['_' + name + '_sep']);
-					}
-				});
-				return settings;
-			}, //end getSettings()
 	/**
 	 * produces the final output
 	 * @param {object} dialog jQuery of target dialog
@@ -250,7 +481,7 @@ jQuery(function($){
 					}else{
 						//fetch results via ajax, showing spinner while doing so...
 						grandad.addClass('cmw-ajax-fetching');
-						$.post(
+						$.get(
 							ajaxurl,
 							{ 'action': 'cmw-find-shortcodes', '_wpnonce': self.data().nonce }
 						).done(function(response){
@@ -369,7 +600,9 @@ jQuery(function($){
 						widgetField = $( item.closest('.ui-dialog-content').data().cmwOnchange )
 							.find(tickOrCross === 'tick' ? '.cmw-setitems' : '.cmw-exclusions'),
 						sampleSet;
-				if(widgetField.length){ //should never not find it!
+				//if we're using the alternative settings, then click a tick/cross is disabled because they are set according to the
+				//alternative settings, which are not modifiable via this instance of the assist!
+				if(!topOfMenu.hasClass('cmw-using-alternative') && widgetField.length){ //should never not find it!
 					//A. if this item hasInheritTickCross then this click will remove tickCross entirely and all inheritance will be lost
 					//B. else* if this item hasTickCross then this click will either
 					//   B1. if the item has no descendants, or we're running legacy version, remove the tickCross
@@ -454,7 +687,7 @@ jQuery(function($){
 							},
 							dialogClass: 'cmw-assistance-dialog cmw-assistance-dialog-fixed'
 						},
-						msgs = $.map(['SetCurrent', 'Inclusions', 'Exclusions', 'Fallback'], function(v){
+						msgs = $.map(['SetCurrent', 'Inclusions', 'Exclusions', 'Fallback', 'Alternative'], function(v){
 							return '<div class="cmw-demo-' + v.toLowerCase() + ' cmw-demo-small">' + (data['cmwDialog' + v] || '') + '</div>';
 						}),
 						dialog = $('<div/>', {id:data.cmwDialogId}).addClass(widgetCustomMenuWizardClass('dialog'))
@@ -498,7 +731,7 @@ jQuery(function($){
 	 */
 			setDialogTitle = function(dialog, oc){
 				dialog.dialog('option', 'title', 'CMW : ' + ( oc.find('.cmw-widget-title').val() || dialog.data().cmwUntitled ) + ' [' + oc.find('.cmw-select-menu').find('option:selected').text() + ']' );
-			},
+			}, //end setDialogTitle()
 	/**
 	 * creates a new list of menu items and inserts it into the dialog content in place of any previous one
 	 * @param {object} dialog jQuery object of the dialog
@@ -749,10 +982,13 @@ jQuery(function($){
 					'-ud' : byItems || oc.find('.cmw-depth').val() < 1, //...is Unlimited Depth
 					'not-br' : notByBranch, //...is NOT Branch
 					'not-br-ci' : notByBranch || !!selectedItem, //...is NOT Branch:Current Item
-					'not-fb-pc' : notByBranch || !!selectedItem || (fallback !== 'parent' && fallback !== 'current') //...is NOT fallback to parent or current
+					'not-fb-pc' : notByBranch || !!selectedItem || (fallback !== 'parent' && fallback !== 'current'), //...is NOT fallback to parent or current
+					'not-sw' : !!oc.find('.cmw-switchable').filter(function(){ return !$(this).val(); }).length //...is NOT switchable (missing rither condition or stage)
 				},
 				function(k, v){
-					oc.find('.cmw-disableif' + k).toggleClass('cmw-colour-grey', v).find('input,select').prop('disabled', v);
+					//as of v3.1.0, the input fields (+ selects, etc) are no longer disabled, because the customizer "pseudo-saves" the
+					//form which wipes out values that you may not have wanted to lose!
+					oc.find('.cmw-disableif' + k).toggleClass('cmw-colour-grey', v);
 				});
 		}, //end cmwAssist.setFields()
 		/**
@@ -767,7 +1003,7 @@ jQuery(function($){
 					byBranch = settings.filter === 'branch',
 					byItems = settings.filter === 'items',
 					byLevel = !byBranch && !byItems,
-					v, m, n;
+					v, m, n, c;
 			//take notice of the widget's hide_title flag...
 			if(settings.title && !settings.hide_title){
 				args.title = [settings.title];
@@ -853,7 +1089,7 @@ jQuery(function($){
 				args.title_from = n;
 			}
 			//switches...
-			for(n in {allow_all_root:1, siblings:1, flat_output:1, ol_root:1, ol_sub:1}){
+			for(n in {allow_all_root:1, siblings:1, flat_output:1, ol_root:1, ol_sub:1, fallback_ci_parent:1}){
 				if(settings[n]){
 					args[n] = 1;
 				}
@@ -872,6 +1108,13 @@ jQuery(function($){
 					args[n] = [m[1]];
 				}
 			}
+			//alternative...
+			if(settings.switch_if){
+				if(settings.switch_at){
+					args.alternative = [settings.switch_if, settings.switch_at];
+					c = alternativeStripDown(settings.switch_to);
+				}
+			}
 			//build the shortcode...
 			v = [];
 			for(n in args){
@@ -879,8 +1122,352 @@ jQuery(function($){
 				v.push( $.isArray(args[n]) ? n + '="' + args[n].join(',') + '"' : n + '=' + args[n] );
 			}
 			//NB at v3.0.0, the shortcode changed from custom_menu_wizard to cmwizard (the previous version is still supported)
-			return '[cmwizard ' + v.join(' ') + '/]';
+			return '[cmwizard ' + v.join(' ') + (!c ? '/]' : ']' + c + '[/cmwizard]');
 		}, //end cmwAssist.shortcode()
+		/**
+		 * performs the filtering and update of the menu structure
+		 * note to self : this function must not alter whatever settings are passed into it, otherwise subsequent update
+		 *                actions, such as shortcode output, will be screwed!
+		 * @param {object} dialog jQuery of dialog
+		 * @param {array} settings Widget config
+		 * @param {integer} usingAlts Indicates whether alternative settings are being used or not
+		 * @return {boolean|array} False if completed, or the alternative settings if they should be applied
+		 */
+		structureUpdate : function(dialog, settings, usingAlts){
+
+			var tobLevel = -1,
+					lastVisibleLevel = 9999,
+					hasIncl = 0,
+					hasExcl = 0,
+					fallback = '',
+					altSettings = null,
+					theBranchItem, hasCurrent, topOfBranch, i, j, k, x, y,
+					stage = 'menu',
+					byBranch = settings.filter === 'branch',
+					byItems = settings.filter === 'items',
+					byLevel = !byBranch && !byItems,
+					ciBranch = byBranch && !settings.branch,
+					canSwitch = !usingAlts && !!settings.switch_if && !!settings.switch_at,
+					topOfMenu = dialog.find('.cmw-demo-themenu-ul'),
+					maxLevel = topOfMenu.data().maxLevel,
+					currentItemLI = topOfMenu.find('.current-menu-item').closest('li'),
+					currentItemLevel = currentItemLI.length ? currentItemLI.data().level : -1,
+					items = topOfMenu.find('li').removeData('included').removeClass('title-from-item'),
+					local_depth = settings.depth,
+					local_depth_rel_current = settings.depth_rel_current,
+					//ticks and crosses (need to be run against the full set of items)...
+					exclusions = filterTickCross(items, settings, 'cross');
+
+			//check for current item and switch...
+			hasCurrent = items.length && currentItemLI.is(items);
+			if(settings.contains_current === stage && !hasCurrent){
+				items = $([]);
+			}
+			if(canSwitch && alternativeCheckFor(stage, hasCurrent, items.length, settings) ){
+				altSettings = alternativeUse(settings, dialog);
+				if(altSettings !== false){
+					//cop out with alternative settings!...
+					return altSettings;
+				}
+			}
+
+			stage = 'primary';
+			//primary filter : items...
+			if(byItems && items.length){
+				items = filterTickCross(items, settings, 'tick');
+			}
+
+			//primary filter : branch...
+			if(byBranch && items.length){
+				topOfBranch = ciBranch ? currentItemLI : items.filter('[data-itemid=' + settings.branch + ']');
+				if(topOfBranch.length){
+					tobLevel = topOfBranch.data().level || 0;
+					items = topOfBranch.add( topOfBranch.find('li') );
+					//since topOfBranch can change later on...
+					theBranchItem = topOfBranch;
+				}else{
+					items = $([]);
+				}
+			}
+
+			//primary filter : level...
+			if(byLevel && items.length && settings.level > 1){
+				for(i = 1, j = []; i < settings.level; i++){
+					j.push('.level-' + i);
+				}
+				items = items.not( j.join(',') );
+			}
+
+			//check for current item and switch...
+			hasCurrent = items.length && currentItemLI.is(items);
+			if(settings.contains_current === stage && !hasCurrent){
+				items = $([]);
+			}
+			if(canSwitch && alternativeCheckFor(stage, hasCurrent, items.length, settings) ){
+				altSettings = alternativeUse(settings, dialog);
+				if(altSettings !== false){
+					//cop out with alternative settings!...
+					return altSettings;
+				}
+			}
+
+			stage = 'secondary';
+			//secondary filter : level...
+			if(byLevel && items.length && local_depth){
+				i = local_depth_rel_current && currentItemLevel >= settings.level
+					//if the limited depth is relative to current item, and current item can be found at or below the start level...
+					? currentItemLevel
+					//set relative to start level...
+					: settings.level;
+				i += local_depth;
+				//note that i has been set to the first level *not* wanted!
+				if(i <= maxLevel){
+					for(j = []; i <= maxLevel; i++){
+						j.push('.level-' + i);
+					}
+					//filter to remove...
+					items = items.not( j.join(',') );
+				}
+			}
+
+			//secondary filter : branch...
+			if(byBranch && items.length){
+				//convert start level to integer...
+				j = parseInt(settings.branch_start, 10);
+				//convert relative to absolute (max'd against 1)...
+				j = isNaN(j) || !j ? tobLevel : (settings.branch_start.match(/^(\+|-)/) ? Math.max(1, tobLevel + j) : j);
+
+				//in order to be eligible for a no-kids fallback:
+				// - branch must be current item
+				// - fallback must be set
+				// - current item has no kids
+				if(ciBranch && settings.fallback && !currentItemLI.find('li').length){
+					//yes, we have a fallback situation...
+					fallback = 'cmw-fellback-to-' + settings.fallback;
+					if(settings.fallback === 'quit'){
+						//copout : just set secondary start level beyond maxLevel...
+						j = maxLevel + 1;
+					}else{
+						//for current, fall back to tob; for parent, fall back to tob - 1, ensuring that we don't fall back further than root...
+						j = settings.fallback === 'current' || tobLevel < 2 ? tobLevel : tobLevel - 1;
+						//if fallback depth is specified, override depth and set to relative-to-current...
+						if(settings.fallback_depth){
+							local_depth = settings.fallback_depth;
+							local_depth_rel_current = 1;
+						}
+					}
+				}
+
+				//j is the secondary start level, tobLevel is the primary level
+				//easy result : if j > maxLevel then there are no matches...
+				if(j > maxLevel){
+					items = $([]);
+				}else{
+					//if secondary start is higher up the structure than primary start, reset the tob...
+					if(j < tobLevel){
+						topOfBranch = topOfBranch.parentsUntil(topOfMenu, 'li.level-' + j);
+					}
+					//do we want (and need) to force starting with the entire level...
+					// - only relevant if secondary start is at or above primary start
+					// - and if secondary level is root then allow_all_root must be set
+					if(settings.start_mode === 'level' && j <= tobLevel && (j > 1 || settings.allow_all_root)){
+						//...reset items to eveything at tob's level, plus all their descendants...
+						items = topOfBranch.parent().find('li');
+					}else if(j < tobLevel){
+						//tob has changed so reset items (to just tob and descendants)...
+						items = topOfBranch.add( topOfBranch.find('li') );
+					}
+					//if falling back and siblings are required, add them in...
+					//note that root level sibling inclusion is still governed by allow_all_root!
+					if(!!fallback && settings.fallback_siblings && items.length && (j > 1 || settings.allow_all_root)){
+						items = items.add( topOfBranch.siblings('li.level-' + j) );
+					}
+				}
+				//may have a tob but might not have any items!...
+				if(items.length){
+					//reset tob level (regardless of whether tob has changed)...
+					tobLevel = j;
+					//is depth unlimited?...
+					k = 9999;
+					if(local_depth){
+						//is (limited) depth relative to current item, and is there an eligible current item to measure against?...
+						k = local_depth_rel_current && currentItemLevel >= tobLevel && items.filter(currentItemLI).length
+							? currentItemLevel
+							: tobLevel;
+						k += local_depth;
+						lastVisibleLevel = k - 1;
+					}
+					//note that k has been set to the first level (after those wanted) that is *not* wanted!
+					for(i = 1, j = []; i <= maxLevel; i++){
+						if(i >= tobLevel && i < k){
+							j.push('.level-' + i);
+						}
+					}
+					//filter to keep...
+					items = items.filter( j.join(',') );
+				}
+			}
+
+			//check for current item and switch...
+			hasCurrent = items.length && currentItemLI.is(items);
+			if(settings.contains_current === stage && !hasCurrent){
+				items = $([]);
+			}
+			if(canSwitch && alternativeCheckFor(stage, hasCurrent, items.length, settings) ){
+				altSettings = alternativeUse(settings, dialog);
+				if(altSettings !== false){
+					//cop out with alternative settings!...
+					return altSettings;
+				}
+			}
+
+			stage = 'inclusions';
+			//branch inclusions...
+			//NB: only applicable if there are already items
+			if(byBranch && items.length){
+				//branch ancestors, possibly with their siblings : but only if the original branch item is either
+				//in items or is below lastVisibleLevel; ALSO, do not show ancestors below lastVisibleLevel!
+				j = theBranchItem.data().level;
+				if(settings.ancestors && (theBranchItem.is(items) || j > lastVisibleLevel)){
+					x = settings.ancestors;
+					//convert a relative level to an absolute one...
+					if(x < 0){
+						x = Math.max(1, j + x);
+					}
+					//ancestor siblings?...
+					y = settings.ancestor_siblings;
+					//convert a relative level to an absolute one...
+					if(y < 0){
+						y = Math.max(1, j + y);
+					}
+					//get the level classes for ancestors and siblings that need to be included...
+					for(i = x, j = [], k = []; i <= maxLevel; i++){
+						if(i <= lastVisibleLevel){
+							//ancestors...
+							j.push('.level-' + i);
+							if(y > 0 && i >= y){
+								//siblings...
+								k.push('.level-' + i);
+							}
+						}
+					}
+					//store current length of items...
+					x = items.length;
+					//find the ancestors...
+					j = theBranchItem.parentsUntil(topOfMenu, j.join(','));
+					//add new ones into items...
+					items = items.add( j.not(items).data('included', ' cmw-an-included-ancestor') );
+					//got ancestors, now what about their siblings?...
+					if(k.length){
+						//filter ancestors for those we want siblings of, and add new siblings into items...
+						items = items.add( j.filter( k.join(',') ).siblings('li').not(items).data('included', ' cmw-an-included-ancestor-sibling') );
+					}
+					//note how many have been added to items as a result of the includes...
+					hasIncl += items.length - x;
+				}
+				//branch siblings : only if the original branch item is currently in items...
+				if(settings.siblings && theBranchItem.is(items)){
+					j = items.length;
+					items = items.add( theBranchItem.siblings('li').data('included', ' cmw-an-included-sibling') );
+					hasIncl += items.length - j;
+				}
+			}
+			//other inclusions...
+			if(items.length && !!settings.include_level){
+				k = getLevelClasses(settings.include_level, maxLevel);
+				if(k){
+					//find and add...
+					j = items.length;
+					items = items.add( topOfMenu.find(k) );
+					hasIncl += items.length - j;
+				}
+			}
+
+			//check for current item and switch...
+			hasCurrent = items.length && currentItemLI.is(items);
+			if(settings.contains_current === stage && !hasCurrent){
+				items = $([]);
+			}
+			if(canSwitch && alternativeCheckFor(stage, hasCurrent, items.length, settings) ){
+				altSettings = alternativeUse(settings, dialog);
+				if(altSettings !== false){
+					//cop out with alternative settings!...
+					return altSettings;
+				}
+			}
+
+			stage = 'output';
+			//exclusions...
+			if(items.length && exclusions.length){
+				//filter to remove...
+				j = items.length;
+				items = items.not(exclusions);
+				hasExcl += j - items.length;
+			}
+			if(items.length && !!settings.exclude_level){
+				k = getLevelClasses(settings.exclude_level, maxLevel);
+				if(k){
+					//filter to remove...
+					j = items.length;
+					items = items.not(k);
+					hasExcl += j - items.length;
+				}
+			}
+
+			//check for current item and switch...
+			hasCurrent = items.length && currentItemLI.is(items);
+			if(settings.contains_current === stage && !hasCurrent){
+				items = $([]);
+			}
+			if(canSwitch && alternativeCheckFor(stage, hasCurrent, items.length, settings) ){
+				altSettings = alternativeUse(settings, dialog);
+				if(altSettings !== false){
+					//cop out with alternative settings!...
+					return altSettings;
+				}
+			}
+
+			//title from...
+			//...check current then current root...
+			if(settings.title_from_current && currentItemLI.length){
+				currentItemLI.addClass('title-from-item');
+			}else if(settings.title_from_current_root && currentItemLI.length){
+				currentItemLI.closest('.level-1').addClass('title-from-item');
+			}else if(byBranch && theBranchItem){
+				//...then branch, then branch root...
+				if(settings.title_from_branch){
+					theBranchItem.addClass('title-from-item');
+				}else if(settings.title_from_branch_root){
+					theBranchItem.closest('.level-1').addClass('title-from-item');
+				}
+			}
+
+			//show/hide the fall back message...
+			dialog.find('.cmw-demo-fallback').data('fellback', fallback).toggleClass('updated', !!fallback);
+			//show/hide the 'select current item' prompt...
+			dialog.find('.cmw-demo-setcurrent').toggleClass('error', !currentItemLI.length && (!!settings.contains_current || ciBranch));
+			//hide the alternative message if not using - and haven't tried to use! - alternative settings...
+			if(!usingAlts && altSettings === null){
+				dialog.find('.cmw-demo-alternative').removeClass('error updated');
+			}
+			//...and toggle the demo menu structure's class (eg. applies an opacity to the ticks/crosses if alternative settings
+			//   are being used, and prevents them being clicked on - because they can't be updated back into the current settings)...
+			dialog.find('.cmw-demo-themenu-ul').toggleClass('cmw-using-alternative', !!usingAlts);
+			//show/hide the inclusions/exclusions messages...
+			i = {inclusions:hasIncl, exclusions:hasExcl};
+			for(j in i){
+				k = dialog.find('.cmw-demo-' + j);
+				k.text( k.text().replace(/\d+$/, i[j]) ).toggleClass('updated', i[j] > 0);
+			}
+
+			//toggle ticks and 'pick' the remaining items...
+			topOfMenu.toggleClass('cmw-demo-filteritems', byItems)
+				.find('.picked').not( items.addClass('picked') ).removeClass('picked');
+
+			//returning false means we're done!...
+			return false;
+			
+		}, //end cmwAssist.structureUpdate()
 		/**
 		 * updates the graphic menu structure from the widget data
 		 * @param {element} el Element responsible for being here
@@ -889,16 +1476,7 @@ jQuery(function($){
 			var target = $(el),
 					oc = findOnchange(0, target),
 					dialog = $('#' + oc.data().cmwDialogId),
-					tobLevel = -1,
-					lastVisibleLevel = 9999,
-					hasIncl = 0,
-					hasExcl = 0,
-					fallback = '',
-					byLevel, byBranch, byItems, theBranchItem,
-					ciBranch, maxLevel, settings,
-					topOfMenu, items, exclusions,
-					local_depth, local_depth_rel_current,
-					currentItemLI, currentItemLevel, topOfBranch, i, j, k, x, y;
+					settings, altSettings;
 
 			if(target.hasClass('cmw-listen')){
 				//the widget field that changed is likely to have an effect on other widget fields...
@@ -908,295 +1486,34 @@ jQuery(function($){
 
 			//dialog specific...
 			if(dialog.length && dialog.dialog('isOpen')){
-
 				dialog.dialog('moveToTop');
-
 				//if selected menu has changed, modify assist's structure...
 				if(target.hasClass('cmw-select-menu')){
 					createMenu(dialog);
 				}
-				byBranch = settings.filter === 'branch';
-				byItems = settings.filter === 'items';
-				byLevel = !byBranch && !byItems;
-				ciBranch = byBranch && !settings.branch;
-				topOfMenu = dialog.find('.cmw-demo-themenu-ul');
-				maxLevel = topOfMenu.data().maxLevel;
-				currentItemLI = topOfMenu.find('.current-menu-item').closest('li');
-				currentItemLevel = currentItemLI.length ? currentItemLI.data().level : -1;
-				items = topOfMenu.find('li').removeData('included').removeClass('title-from-item');
-				
-				//don't want to alter settings at all (affects shortcode output), so create some local copies for use within this function...
-				local_depth = settings.depth;
-				local_depth_rel_current = settings.depth_rel_current;
 
-				//ticks and crosses (need to be run against the full set of items)...
-				exclusions = filterTickCross(items, settings, 'cross');
-
-				//primary filter : items...
-				if(byItems){
-					items = filterTickCross(items, settings, 'tick');
+				//if it's determined that altSettings should be used then they are intially returned and the structure update
+				//is re-run with those settings (and an indicator to say that alts are bing used). otherwise, the structure
+				//update simply returns false to say that the original settings should be used (either because alts don't apply,
+				//or because the alts that we've got are not valid and can't be used)
+				altSettings = this.structureUpdate(dialog, settings);
+				if(altSettings !== false){
+					//don't care what this returns (should only be false!) because we're not going to run it again...
+					this.structureUpdate(dialog, altSettings, true);
 				}
 
-				//primary filter : branch...
-				if(byBranch && items.length){
-					topOfBranch = ciBranch ? currentItemLI : items.filter('[data-itemid=' + settings.branch + ']');
-					if(topOfBranch.length){
-						tobLevel = topOfBranch.data().level || 0;
-						items = topOfBranch.add( topOfBranch.find('li') );
-						//since topOfBranch can change later on...
-						theBranchItem = topOfBranch;
-					}else{
-						items = $([]);
-					}
-				}
-
-				//primary filter : level...
-				if(byLevel && items.length && settings.level > 1){
-					for(i = 1, j = []; i < settings.level; i++){
-						j.push('.level-' + i);
-					}
-					items = items.not( j.join(',') );
-				}
-
-				//check for current item in menu...
-				//NB: this used to be done (pre 3.0.4) in front of the branch primary filter, but that filter setup may now
-				//    be needed, so this check has moved down so that all primary filters are done before checking
-				if(settings.contains_current === 'menu' && items.length && !currentItemLI.length){
-					items = $([]);
-				}
-
-				//check for current item after primary...
-				if(settings.contains_current === 'primary' && items.length && !currentItemLI.is(items)){
-					items = $([]);
-				}
-
-				//secondary filter : level...
-				if(byLevel && items.length && local_depth){
-					i = local_depth_rel_current && currentItemLevel >= settings.level
-						//if the limited depth is relative to current item, and current item can be found at or below the start level...
-						? currentItemLevel
-						//set relative to start level...
-						: settings.level;
-					i += local_depth;
-					//note that i has been set to the first level *not* wanted!
-					if(i <= maxLevel){
-						for(j = []; i <= maxLevel; i++){
-							j.push('.level-' + i);
-						}
-						//filter to remove...
-						items = items.not( j.join(',') );
-					}
-				}
-
-				//secondary filter : branch...
-				if(byBranch && items.length){
-					//convert start level to integer...
-					j = parseInt(settings.branch_start, 10);
-					//convert relative to absolute (max'd against 1)...
-					j = isNaN(j) || !j ? tobLevel : (settings.branch_start.match(/^(\+|-)/) ? Math.max(1, tobLevel + j) : j);
-
-					//in order to be eligible for a no-kids fallback:
-					// - branch must be current item
-					// - fallback must be set
-					// - current item has no kids
-					if(ciBranch && settings.fallback && !currentItemLI.find('li').length){
-						//yes, we have a fallback situation...
-						fallback = 'cmw-fellback-to-' + settings.fallback;
-						if(settings.fallback === 'quit'){
-							//copout : just set secondary start level beyond maxLevel...
-							j = maxLevel + 1;
-						}else{
-							//for current, fall back to tob; for parent, fall back to tob - 1, ensuring that we don't fall back further than root...
-							j = settings.fallback === 'current' || tobLevel < 2 ? tobLevel : tobLevel - 1;
-							//if fallback depth is specified, override depth and set to relative-to-current...
-							if(settings.fallback_depth){
-								local_depth = settings.fallback_depth;
-								local_depth_rel_current = 1;
-							}
-						}
-					}
-
-					//j is the secondary start level, tobLevel is the primary level
-					//easy result : if j > maxLevel then there are no matches...
-					if(j > maxLevel){
-						items = $([]);
-					}else{
-						//if secondary start is higher up the structure than primary start, reset the tob...
-						if(j < tobLevel){
-							topOfBranch = topOfBranch.parentsUntil(topOfMenu, 'li.level-' + j);
-						}
-						//do we want (and need) to force starting with the entire level...
-						// - only relevant if secondary start is at or above primary start
-						// - and if secondary level is root then allow_all_root must be set
-						if(settings.start_mode === 'level' && j <= tobLevel && (j > 1 || settings.allow_all_root)){
-							//...reset items to eveything at tob's level, plus all their descendants...
-							items = topOfBranch.parent().find('li');
-						}else if(j < tobLevel){
-							//tob has changed so reset items (to just tob and descendants)...
-							items = topOfBranch.add( topOfBranch.find('li') );
-						}
-						//if falling back and siblings are required, add them in...
-						//note that root level sibling inclusion is still governed by allow_all_root!
-						if(!!fallback && settings.fallback_siblings && items.length && (j > 1 || settings.allow_all_root)){
-							items = items.add( topOfBranch.siblings('li.level-' + j) );
-						}
-					}
-					//may have a tob but might not have any items!...
-					if(items.length){
-						//reset tob level (regardless of whether tob has changed)...
-						tobLevel = j;
-						//is depth unlimited?...
-						k = 9999;
-						if(local_depth){
-							//is (limited) depth relative to current item, and is there an eligible current item to measure against?...
-							k = local_depth_rel_current && currentItemLevel >= tobLevel && items.filter(currentItemLI).length
-								? currentItemLevel
-								: tobLevel;
-							k += local_depth;
-							lastVisibleLevel = k - 1;
-						}
-						//note that k has been set to the first level (after those wanted) that is *not* wanted!
-						for(i = 1, j = []; i <= maxLevel; i++){
-							if(i >= tobLevel && i < k){
-								j.push('.level-' + i);
-							}
-						}
-						//filter to keep...
-						items = items.filter( j.join(',') );
-					}
-				}
-
-				//check for current item after secondary...
-				if(settings.contains_current === 'secondary' && items.length && !currentItemLI.is(items)){
-					items = $([]);
-				}
-
-				//branch inclusions...
-				//NB: only applicable if there are already items
-				if(byBranch && items.length){
-					//branch ancestors, possibly with their siblings : but only if the original branch item is either
-					//in items or is below lastVisibleLevel; ALSO, do not show ancestors below lastVisibleLevel!
-					j = theBranchItem.data().level;
-					if(settings.ancestors && (theBranchItem.is(items) || j > lastVisibleLevel)){
-						x = settings.ancestors;
-						//convert a relative level to an absolute one...
-						if(x < 0){
-							x = Math.max(1, j + x);
-						}
-						//ancestor siblings?...
-						y = settings.ancestor_siblings;
-						//convert a relative level to an absolute one...
-						if(y < 0){
-							y = Math.max(1, j + y);
-						}
-						//get the level classes for ancestors and siblings that need to be included...
-						for(i = x, j = [], k = []; i <= maxLevel; i++){
-							if(i <= lastVisibleLevel){
-								//ancestors...
-								j.push('.level-' + i);
-								if(y > 0 && i >= y){
-									//siblings...
-									k.push('.level-' + i);
-								}
-							}
-						}
-						//store current length of items...
-						x = items.length;
-						//find the ancestors...
-						j = theBranchItem.parentsUntil(topOfMenu, j.join(','));
-						//add new ones into items...
-						items = items.add( j.not(items).data('included', ' cmw-an-included-ancestor') );
-						//got ancestors, now what about their siblings?...
-						if(k.length){
-							//filter ancestors for those we want siblings of, and add new siblings into items...
-							items = items.add( j.filter( k.join(',') ).siblings('li').not(items).data('included', ' cmw-an-included-ancestor-sibling') );
-						}
-						//note how many have been added to items as a result of the includes...
-						hasIncl += items.length - x;
-					}
-					//branch siblings : only if the original branch item is currently in items...
-					if(settings.siblings && theBranchItem.is(items)){
-						j = items.length;
-						items = items.add( theBranchItem.siblings('li').data('included', ' cmw-an-included-sibling') );
-						hasIncl += items.length - j;
-					}
-				}
-				//other inclusions...
-				if(items.length && !!settings.include_level){
-					k = getLevelClasses(settings.include_level, maxLevel);
-					if(k){
-						//find and add...
-						j = items.length;
-						items = items.add( topOfMenu.find(k) );
-						hasIncl += items.length - j;
-					}
-				}
-
-				//check for current item after inclusions...
-				if(settings.contains_current === 'inclusions' && items.length && !currentItemLI.is(items)){
-					items = $([]);
-				}
-
-				//exclusions...
-				if(items.length && exclusions.length){
-					//filter to remove...
-					j = items.length;
-					items = items.not(exclusions);
-					hasExcl += j - items.length;
-				}
-				if(items.length && !!settings.exclude_level){
-					k = getLevelClasses(settings.exclude_level, maxLevel);
-					if(k){
-						//filter to remove...
-						j = items.length;
-						items = items.not(k);
-						hasExcl += j - items.length;
-					}
-				}
-
-				//final check for current item in output...
-				if(settings.contains_current === 'output' && items.length && !currentItemLI.is(items)){
-					items = $([]);
-				}
-
-				//title from...
-				//...check current then current root...
-				if(settings.title_from_current && currentItemLI.length){
-					currentItemLI.addClass('title-from-item');
-				}else if(settings.title_from_current_root && currentItemLI.length){
-					currentItemLI.closest('.level-1').addClass('title-from-item');
-				}else if(byBranch && theBranchItem){
-					//...then branch, then branch root...
-					if(settings.title_from_branch){
-						theBranchItem.addClass('title-from-item');
-					}else if(settings.title_from_branch_root){
-						theBranchItem.closest('.level-1').addClass('title-from-item');
-					}
-				}
-
-				//show/hide the fall back message...
-				dialog.find('.cmw-demo-fallback').data('fellback', fallback).toggleClass('updated', !!fallback);
-				//show/hide the 'select current item' prompt...
-				dialog.find('.cmw-demo-setcurrent').toggleClass('error', !currentItemLI.length && (!!settings.contains_current || ciBranch));
-				//...and the inclusions/exclusions messages...
-				i = {inclusions:hasIncl, exclusions:hasExcl};
-				for(j in i){
-					k = dialog.find('.cmw-demo-' + j);
-					k.text( k.text().replace(/\d+$/, i[j]) ).toggleClass('updated', i[j] > 0);
-				}
-
-				//toggle ticks and 'pick' the remaining items...
-				topOfMenu.toggleClass('cmw-demo-filteritems', byItems)
-					.find('.picked').not( items.addClass('picked') ).removeClass('picked');
 				//produce output...
 				setDialogTitle(dialog, oc);
-				showOutput(dialog, settings);
-
+				//show output with whichever settings we ended up using...
+				showOutput(dialog, altSettings || settings);
+				altSettings = null;
 			} //end dialog specific
 
+			//always use original settings to update the shortcode displays...
 			oc.add(dialog).find('code').text( this.shortcode( settings ) );
 
 		} //end cmwAssist.update()
+
 	}; //end cmwAssist
 
 	/**

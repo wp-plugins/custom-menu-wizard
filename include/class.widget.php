@@ -59,7 +59,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		}
 
 		//sanitize $instance...
-		$instance = $this->cmw_settings( $instance, array(), __FUNCTION__ );
+		$instance = self::cmw_settings( $instance, array(), __FUNCTION__ );
 
 		//if no populated menus exist, suggest the user go create one...
 		if( ( $menus = $this->cmw_scan_menus( $instance['menu'], $instance['branch'] ) ) === false ){
@@ -128,6 +128,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		$isNotByBranch = $instance['filter'] != 'branch'; // disableifnot-br (is NOT Branch filter)
 		$isNotBranchCurrentItem = $isNotByBranch || !empty( $instance['branch'] ); // disableifnot-br-ci (is NOT "Branch:Current Item")
 		$isNotFallbackParentCurrent = $isNotBranchCurrentItem || !in_array( $instance['fallback'], array('parent', 'current') ); //disableifnot-fb-pc (is NOT set to fall back to parent or current)
+		$isNotSwitchable = empty( $instance['switch_if'] ) || empty( $instance['switch_at'] ); // disableifnot-sw (missing either the condition of the processing stage)
 
 		//NB the 'onchange' wrapper holds any text required by the "assist"
 ?>
@@ -136,6 +137,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		data-cmw-v36plus='<?php echo $this->cmw_wp_version('3.6', true) ? 'true' : 'false'; ?>'
 		data-cmw-dialog-prompt='<?php _e('Click an item to toggle &quot;Current Menu Item&quot;'); ?>'
 		data-cmw-dialog-output='<?php _e('Basic Output'); ?>'
+		data-cmw-dialog-alternative='<?php _e('Alternative settings'); ?>'
 		data-cmw-dialog-fallback='<?php _e('Fallback invoked'); ?>'
 		data-cmw-dialog-inclusions='<?php _e('Inclusions : 0'); ?>'
 		data-cmw-dialog-exclusions='<?php _e('Exclusions : 0'); ?>'
@@ -449,6 +451,17 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 	</div><!-- end .cmw-disableifnot-br-ci --><?php $this->cmw_disableif( 'pop' ); ?>
 
+	<div>
+		<div class="cmw-indented"><?php _e('If no Current Item can be found:'); ?>
+			<br />
+			<?php $this->cmw_formfield_checkbox( $instance, 'fallback_ci_parent',
+				array(
+					'label' => __('Try items marked as Parent of Current')
+				) ); ?>
+			<span class="cmw-small-block cmw-indented"><em class="cmw-colour-grey"><?php _e('This is a last resort to determine a "Current Item"'); ?></em></span>
+		</div>
+	</div>
+
 	<?php $this->cmw_close_a_field_section(); ?>
 
 <?php
@@ -472,7 +485,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	</div>
 
 	<div>
-		Set Title from:
+		<?php _e('Set Title from:'); ?>
 
 		<div class="cmw-indented">
 			<?php $this->cmw_formfield_checkbox( $instance, 'title_from_current',
@@ -503,7 +516,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	</div>
 
 	<div>
-		Change UL to OL:
+		<?php _e('Change UL to OL:'); ?>
 		<br />
 		<?php $this->cmw_formfield_checkbox( $instance, 'ol_root',
 			array(
@@ -631,9 +644,51 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 	<?php $this->cmw_close_a_field_section(); ?>
 		
-	<div class="cmw-shortcode-nojs cmw-small-block"><?php _e('With Javascript disabled, the shortcode below is only guaranteed to be accurate when you <em>initially enter</em> Edit mode!'); ?></div>
-	<div class="cmw-shortcode-wrap"><code class="widget-<?php echo $this->id_base; ?>-shortcode ui-corner-all" 
-		title="<?php _e('shortcode'); ?>"><?php echo $this->cmw_shortcode( array_merge( $instance, array( 'menu' => $menus['selectedMenu'] ) ) ); ?></code></div>
+<?php
+		/**
+		 * v3.1.0 start collapsible section : 'Alternative'
+		 */
+		$this->cmw_open_a_field_section( $instance, __('Alternative'), 'fs_alternative' ); ?>
+
+	<div>
+		<?php $this->cmw_assist_link(); ?>
+
+		<label for="<?php echo $this->get_field_id('switch_if'); ?>" class="cmw-followed-by"><?php _e('On condition:'); ?></label>
+		<br /><select id="<?php echo $this->get_field_id('switch_if'); ?>" class="cmw-switchable cmw-listen"
+				<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('switch_if'); ?>">
+			<option value="" <?php selected( $instance['switch_if'], '' ); ?>>&nbsp;</option>
+			<option value="current" <?php selected( $instance['switch_if'], 'current' ); ?>><?php _e('Current Item is in...'); ?></option>
+			<option value="no-current" <?php selected( $instance['switch_if'], 'no-current' ); ?>><?php _e('Current Item is NOT in...'); ?></option>
+			<option value="no-output" <?php selected( $instance['switch_if'], 'no-output' ); ?>><?php _e('No Output from...'); ?></option>
+		</select>
+
+		<select id="<?php echo $this->get_field_id('switch_at'); ?>" class="cmw-switchable cmw-listen"
+				<?php $this->cmw_disableif(); ?> name="<?php echo $this->get_field_name('switch_at'); ?>">
+			<option value="" <?php selected( $instance['switch_at'], '' ); ?>>&nbsp;</option>
+			<option value="menu" <?php selected( $instance['switch_at'], 'menu' ); ?>><?php echo _e('Menu'); ?></option>
+			<option value="primary" <?php selected( $instance['switch_at'], 'primary' ); ?>><?php echo _e('Primary Filter'); ?></option>
+			<option value="secondary" <?php selected( $instance['switch_at'], 'secondary' ); ?>><?php echo _e('Secondary Filter'); ?></option>
+			<option value="inclusions" <?php selected( $instance['switch_at'], 'inclusions' ); ?>><?php echo _e('Inclusions'); ?></option>
+			<option value="output" <?php selected( $instance['switch_at'], 'output' ); ?>><?php echo _e('Final Output'); ?></option>
+		</select>
+
+		<br />
+		<label class="cmw-disableifnot-sw<?php $this->cmw_disableif( 'push', $isNotSwitchable ); ?>"><?php _e('Then switch settings to:'); ?>
+			<br /><textarea rows="3" cols="20" <?php $this->cmw_disableif(); ?> id="<?php echo $this->get_field_id('switch_to'); ?>" 
+			name="<?php echo $this->get_field_name('switch_to'); ?>"
+			class="widefat"><?php echo $instance['switch_to']; ?></textarea>
+		</label><!-- end .cmw-disableifnot-sw --><?php $this->cmw_disableif( 'pop' ); ?>
+		<span class="cmw-small-block cmw-indented"><em class="cmw-colour-grey">Enter/Paste a [cmwizard.../] shortcode</em></span>
+
+	</div>
+
+	<?php $this->cmw_close_a_field_section(); ?>
+
+	<div class="cmw-border-top">
+		<div class="cmw-shortcode-nojs cmw-small-block"><?php _e('With Javascript disabled, the shortcode below is only guaranteed to be accurate when you <em>initially enter</em> Edit mode!'); ?></div>
+		<div class="cmw-shortcode-wrap"><code class="widget-<?php echo $this->id_base; ?>-shortcode ui-corner-all" 
+			title="<?php _e('shortcode'); ?>"><?php echo $this->cmw_shortcode( array_merge( $instance, array( 'menu' => $menus['selectedMenu'] ) ) ); ?></code></div>
+	</div>
 
 </div>
 <?php
@@ -660,7 +715,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			return $this->cmw_legacy_update( $new_instance, $old_instance );
 		}
 
-		return $this->cmw_settings( 
+		return self::cmw_settings( 
 			$new_instance, 
 			//allow a filter to return true, whereby any previous settings (now possibly unused) will be wiped instead of being allowed to remain...
 			//eg. add_filter( 'custom_menu_wizard_wipe_on_update', [filter_function], 10, 1 ) => true
@@ -688,8 +743,10 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		}
 
 		//sanitize $instance...
-		$instance = $this->cmw_settings( $instance, array(), __FUNCTION__ );
-
+		$instance = self::cmw_settings( $instance, array(), __FUNCTION__ );
+		//holds information determined by the walker...
+		$this->_cmw_walker = array();
+	 
 		//v1.1.0  As of WP v3.6, wp_nav_menu() automatically prevents any HTML output if there are no items...
 		$instance['hide_empty'] = $instance['hide_empty'] && $this->cmw_wp_version('3.6');
 
@@ -704,6 +761,12 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			//no menu, no output...
 			if ( !empty( $menu ) ){
 
+				//unless told not to, put the shortcode equiv. into a data item...
+				//NB: to turn this off (example):
+				//    add_filter( 'custom_menu_wizard_settings_pre_widget', 'cmw_no_cmws', 10, 2 );
+				//    function cmw_no_cmws( $instance, $id_base ){ $instance['cmws_off'] = true; return $instance; }
+				$dataCMWS = empty( $instance['cmws_off'] ) ? " data-cmws='" . esc_attr( $this->cmw_shortcode( $instance, true ) ) . "'" : '';
+
 				if( !empty( $instance['container_class'] ) ){
 					//the menu-[menu->slug]-container class gets applied by WP UNLESS an alternative
 					//container class is supplied in the params - I'm going to set the param such that
@@ -713,10 +776,9 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				}
 				
 				$instance['menu_class'] = preg_split( '/\s+/', $instance['menu_class'], -1, PREG_SPLIT_NO_EMPTY );
-				if( $instance['fallback'] ){
-					//add a cmw-fellback-maybe class to the menu and we'll remove or replace it later...
-					$instance['menu_class'][] = 'cmw-fellback-maybe';
-				}
+				//add cmw-alternate-maybe & cmw-fellback-maybe classes to the menu and we'll remove or replace later...
+				$instance['menu_class'][] = 'cmw-alternate-maybe';
+				$instance['menu_class'][] = 'cmw-fellback-maybe';
 				$instance['menu_class'] = implode( ' ', $instance['menu_class'] );
 
 				$walker = new Custom_Menu_Wizard_Walker;
@@ -738,11 +800,6 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 					);
 				//for the walker's use...
 				$params['_custom_menu_wizard']['_walker'] = array();
-				//unless told not to, put the shortcode equiv. into a data item...
-				//NB: to turn this off (example):
-				//    add_filter( 'custom_menu_wizard_settings_pre_widget', 'cmw_no_cmws', 10, 2 );
-				//    function cmw_no_cmws( $instance, $id_base ){ $instance['cmws_off'] = true; return $instance; }
-				$dataCMWS = empty( $instance['cmws_off'] ) ? " data-cmws='" . esc_attr( $this->cmw_shortcode( $instance, true ) ) . "'" : '';
 				//set wrapper to UL or OL...
 				if( $instance['ol_root'] ){
 					$params['items_wrap'] = '<ol id="%1$s" class="%2$s" data-cmwv="' . $instance['cmwv'] . '"' . $dataCMWS . '>%3$s</ol>';
@@ -774,6 +831,12 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				//only put something out if there is something to put out...
 				if( !empty( $out ) ){
 
+					//check to see if the settings have been changed, either as a result of invoking an alternative
+					//configuration, or due to the application of a custom_menu_wizard_walker_change_settings filter...
+					if( !empty( $this->_cmw_walker['instances'] ) ){
+						$instance = $this->_cmw_walker['instances']['new'];
+					}
+
 					//title from : priority is current -> current root -> branch -> branch root...
 					//note that none actually have to be present in the results
 					foreach( array('current', 'current_root', 'branch', 'branch_root') as $v){
@@ -790,8 +853,14 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 					//remove/replace the cmw-fellback-maybe class...
 					$out = str_replace(
-						'cmw-fellback-maybe',
-						empty( $this->_cmw_walker['fellback'] ) ? '' : 'cmw-fellback-' . $this->_cmw_walker['fellback'],
+						array(
+							'cmw-fellback-maybe',
+							'cmw-alternate-maybe'
+						),
+						array(
+							empty( $this->_cmw_walker['fellback'] ) ? '' : 'cmw-fellback-' . $this->_cmw_walker['fellback'],
+							empty( $this->_cmw_walker['alternative'] ) ? '' : 'cmw-invoked-alternative'
+						),
 						$out );
 
 					//try to add widget_class (if specified) to before_widget...
@@ -847,6 +916,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	/**
 	 * either pushes, pops, or echoes last of, the disabled attributes array
 	 * note that if accessibility mode is on, nothing should get disabled!
+	 * as of 3.1.0, nothing gets disabled, just coloured grey (incl. legacy versions)!
 	 * 
 	 * @param string $action 'pop' or 'push'
 	 * @param boolean $test What to push
@@ -859,7 +929,9 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		if( $action == 'push' ){
 			if( $test && !$this->_cmw_accessibility ){
 				//append disabled attribute...
-				$this->_cmw_disableif[] = 'disabled="disabled"';
+				//v3.1.0 : nothing gets disabled, including any legacy stuff!
+//				$this->_cmw_disableif[] = 'disabled="disabled"';
+				$this->_cmw_disableif[] = '';
 				//and echo disabled class...
 				echo ' cmw-colour-grey';
 			}else{
@@ -1191,7 +1263,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * @param string Name of the calling method
 	 * @return array Sanitized widget settings
 	 */
-	public function cmw_settings( $from_instance, $base_instance, $method = 'update' ){
+	public static function cmw_settings( $from_instance, $base_instance = false, $method = 'widget' ){
 		
 /* old (pre v3) settings...
 		//switches...
@@ -1216,6 +1288,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		foreach( array(
 				'allow_all_root'                    => 0, //v3.0.0
 				'depth_rel_current'                 => 0,
+				'fallback_ci_parent'                => 0, //v3.1.0 enables fallback determination of current item to item having current_item_parent set
 				'fallback_siblings'                 => 0, //v3.0.0 sort of replaces fallback_include_parent_siblings
 				'flat_output'                       => 0,
 				'hide_title'                        => 0,
@@ -1234,7 +1307,8 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				'fs_output'                         => 1,
 				'fs_container'                      => 1,
 				'fs_classes'                        => 1,
-				'fs_links'                          => 1
+				'fs_links'                          => 1,
+				'fs_alternative'                    => 1  //v3.1.0
 				) as $k => $v ){
 
 			if( $method == 'update' ){
@@ -1273,6 +1347,9 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				'exclude_level'     => '',  //v3.0.0 (1 or more digits, possibly with an appended '-' or '+')
 				'fallback'          => '',  //v3.0.0 replace fallback_no_children ('', 'parent', 'current', 'quit')
 				'include_level'     => '',  //v3.0.4 (1 or more digits, possibly with an appended '-' or '+')
+				'switch_if'         => '', //v3.1.0 ('', 'current', 'no-current', 'no-output')
+				'switch_at'         => '', //v3.1.0 (same as for contains_current)
+				'switch_to'         => '', //v3.1.0 (a [cmwizard .../] shortcode)
 				'menu_class'        => 'menu-widget',
 				'widget_class'      => '',
 				'cmwv'              => ''
@@ -1283,6 +1360,9 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				//escape strings...
 				$instance[ $k ] = esc_attr( trim( $instance[ $k ] ) );
 			}
+		}
+		if( $method == 'widget' && !empty( $instance['switch_to'] ) ){
+			$instance['switch_to'] = apply_filters( 'custom_menu_wizard_sanitize_alternative', $instance['switch_to'] );
 		}
 
 		//html strings : values are defaults...
@@ -1343,9 +1423,6 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		}
 		unset( $instance['include_root'] );
 
-		//holds information determined by the walker...
-		$this->_cmw_walker = array();
-	 
 		return $instance;
 
 	} //end cmw_settings()
@@ -1449,7 +1526,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			$args['title_from'] = $n;
 		}
 		//switches...
-		foreach( array('allow_all_root', 'siblings', 'flat_output', 'ol_root', 'ol_sub') as $n ){
+		foreach( array('allow_all_root', 'siblings', 'flat_output', 'ol_root', 'ol_sub', 'fallback_ci_parent') as $n ){
 			if( $instance[ $n ] ){
 				$args[ $n ] = 1;
 			}
@@ -1475,6 +1552,11 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				$args[ $n ] = array( $m[1] );
 			}
 		}
+		//alternative...
+		if( !empty( $instance['switch_if'] ) && !empty( $instance['switch_at'] ) ){
+			$args['alternative'] = array( $instance['switch_if'], $instance['switch_at'] );
+			$content = apply_filters( 'custom_menu_wizard_sanitize_alternative', $instance['switch_to'] );
+		}
 		//build the shortcode...
 		$m = array();
 		foreach( $args as $n => $v ){
@@ -1488,7 +1570,8 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		unset( $args );
 
 		//NB at v3.0.0, the shortcode changed from custom_menu_wizard to cmwizard (the previous version is still supported)
-		return $asJSON ? json_encode( $m ) : '[cmwizard ' . implode( ' ', $m ) . '/]';
+		//for JSON, don't output content...
+		return $asJSON ? json_encode( $m ) : '[cmwizard ' . implode( ' ', $m ) . ( empty( $content ) ? '/]' : ']' . $content . '[/cmwizard]' );
 
 	} //end cmw_shortcode()
 

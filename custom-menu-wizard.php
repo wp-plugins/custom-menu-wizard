@@ -3,13 +3,20 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 3.0.4
+ * Version: 3.1.0
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 defined( 'ABSPATH' ) or exit();
 /*
+ * v3.1.0 change log
+ * - added an Alternative section which takes a cmwizard shortcode and conditionally applies it as an entirely new widget configuration
+ * - added fallback determination (has to be enabled) for no current item found as using items marked as current_item_parent (first found)
+ * - fixed bug in determination of home page pagination pages (?paged=2, etc) as home page still being current item
+ * - fixed bug introduced in v3.0.4 that prevented CMW script loading on the customizer page - when the Widget Customizer plugin is loaded - for WordPress v3.8 and below
+ * - fixed bug : stop disabling selected fields based on other settings, because this caused the customizer to wipe values that may have been still required
+ * 
  * v3.0.4 change log
  * - fixed bug in the display of the "No Current Item!" warning in the "assist"
  * - corrected the enabling/disabling of a couple of fields in the widget form, and tweaked the indentation for better responsiveness
@@ -132,7 +139,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 	//declare the main plugin class...
 	class Custom_Menu_Wizard_Plugin {
 		
-		public static $version = '3.0.4';
+		public static $version = '3.1.0';
 		public static $script_handle = 'custom-menu-wizard-plugin-script';
 		protected static $instance;
 		
@@ -150,7 +157,12 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 			//add customizer support...
 			add_action( 'customize_controls_enqueue_scripts', array( &$this, 'enqueue_styles' ) );
 			add_action( 'customize_controls_enqueue_scripts', array( &$this, 'enqueue_scripts' ) );
-			
+
+			//add filter for encoding a cmwizard shortcode into instance settings...
+			add_filter( 'custom_menu_wizard_encode_shortcode', array( $this, 'encode_shortcode' ), 10, 1 );
+			//add filter for sanitizing an alternative shortcode setting... 
+			add_filter( 'custom_menu_wizard_sanitize_alternative', array( $this, 'sanitize_alternative' ), 10, 1 );
+
 		} //end __construct()
 
 		/**
@@ -178,6 +190,11 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 		public function enqueue_scripts(){
 
 			//script is pre-registered - see this->register_scripts() - so that it can be localized if need be (like for accessibility mode)
+			//BUT on customize screens pre WPv3.9 the script does not get the chance to pre-register before it is 
+			//asked to enqueue, so this has to check that it is actually registered!...
+			if( !wp_script_is( self::$script_handle, 'registered' ) ){
+				$this->register_scripts();
+			}
 			wp_enqueue_script( self::$script_handle );
 			
 		} //end enqueue_scripts()
@@ -244,7 +261,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 		} //end update_message()
 
 		/**
-		 * hooked into wp_ajax_cmw-find-shortcodes action : handle ajax request to find posts containing CMW shortcodes
+		 * hooked into wp_ajax_cmw-find-shortcodes action : handle ajax request to find posts containing CMW shortcodes, returning XML
 		 */
 		public function ajax_find_shortcodes(){
 
@@ -395,6 +412,32 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 			
 		} //end widget_and_shortcode()
 
+		/**
+		 * hooked into custom_menu_wizard_sanitize_alternative filter : sanitizes an alternative shortcode setting
+		 * used by this->shortcode_instance, and the widget class
+		 * 
+		 * @param string $alt Alternative (switch_to setting)
+		 * @return string
+		 */
+		public function sanitize_alternative( $alt = '' ){
+
+			if( empty( $alt ) || !is_string( $alt ) ){
+				return '';
+			}
+
+			//kill containing square brackets, self-terminators and spaces, then split on square bracket...
+			$alt = preg_split( '/[\[\]]/', trim( $alt, ' []/' ) );
+			//use the first element, kill tabs, CRLFs and multiple spaces, and retrim for self-terminators and spaces...
+			$alt = trim( preg_replace( array( '/[\r\n\t]+/', '/\s\s+/' ), ' ', $alt[0] ), ' /' );
+			//remove leading 'cmwizard' tag...
+			$alt = preg_replace( '/^cmwizard\s/', '', $alt . ' ' );
+			//remove any occurrences of 'menu=whatever' and 'alternative="whatever"' (optional double quotes), and trim spaces...
+			$alt = trim( preg_replace( array('/\smenu=[^\s]*\s/', '/\salternative=("[^"]*"|[^\s]*)\s/' ), ' ', ' ' . $alt . ' ' ) );
+
+			return $alt;
+
+		} //end sanitize_alternative()
+
 		/** 
 		 * shortcode processing for [cmwizard option="" option="" ...] (as of v3.0.0)
 		 * 
@@ -434,6 +477,85 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 		public function shortcode($atts, $content, $tag){
 
 			$html = '';
+			$instance = $this->shortcode_instance( $atts, $tag, $content, true );
+			$ok = !empty( $instance );
+
+			if( $ok && !empty( $instance['findme'] ) ){
+				//return the findme output...
+				return $this->find_shortcodes( $instance );
+			}
+
+			if( $ok ){
+				//handle widget_class here because we have full control over $before_widget...
+				$before_widget_class = array(
+					'widget_custom_menu_wizard',
+					'shortcode_custom_menu_wizard'
+					);
+				$instance['widget_class'] = empty( $instance['widget_class'] ) ? '' : esc_attr( trim ( $instance['widget_class'] ) );
+				if( !empty( $instance['widget_class'] ) ){
+					foreach( explode(' ', $instance['widget_class'] ) as $i ){
+						if( !empty( $i ) && !in_array( $i, $before_widget_class ) ){
+							$before_widget_class[] = $i;
+						}
+					} 
+				}
+				unset( $instance['widget_class'] );
+			}
+
+			if( $ok ){
+				//not used by the plugin, but could be used in the widget code to tell whether it was being
+				//run as a result of a widget or a shortcode?...
+				$instance['shortcode'] = true;
+				//allow the element that wraps the widget title to be changed from an h2 (the WP default) to another tag...
+				//note : does not allow for changing the class, or for removing the wrapping element
+				//       for a class override, add CSS rule for
+				//         .shortcode_custom_menu_wizard .widgettitle { ..... }
+				//       can also be overriden using the 'custom_menu_wizard_shortcode_widget_args' filter (applied below)
+				$instance['title_tag'] = esc_attr( trim( $instance['title_tag'] ) );
+				if( empty( $instance['title_tag'] ) ){
+					//default to H2...
+					$instance['title_tag'] = 'h2';
+				}
+				//apart from before_widget, these are lifted from the_widget() (wp-includes/widgets.php)...
+				$sidebar_args = array(
+					'before_widget' => '<div class="' . implode( ' ', $before_widget_class ) . '">',
+					'after_widget' => '</div>',
+					'before_title' => '<' . $instance['title_tag'] . ' class="widgettitle">',
+					'after_title' => '</' . $instance['title_tag'] . '>'
+					);
+				unset( $instance['title_tag'] );
+
+				ob_start();
+				the_widget(
+					'Custom_Menu_Wizard_Widget',
+					apply_filters(
+						'custom_menu_wizard_shortcode_settings',
+						array_merge( $instance, array('cmwv' => self::$version) )
+					),
+					apply_filters(
+						'custom_menu_wizard_shortcode_widget_args',
+						array_merge( $sidebar_args, array('cmwv' => self::$version) )
+					) );
+				$html = ob_get_clean();
+			}
+
+		 	return empty( $html ) ? '' : $html;
+
+		} //end shortcode()
+
+		/**
+		 * does most of the attribute processing/checking for the cmwizard (only) shortcode
+		 * is called from shortcode() method *AND* encode_shortcode() method, which is run from a filter enabling
+		 * settings to be changed at start (after determination of current item) of the widget's walker process.
+		 * 
+		 * @param array $atts options supplied to the shortcode
+		 * @param string $tag Shortcode tag
+		 * @param string $content Within start-end shortcode tags
+		 * @param boolean $doShortcode True if called from shortcode(), false otherwise
+		 * @return array|boolean A set of widget instance settings, or false if shortcode is invalid
+		 */
+		public function shortcode_instance( $atts, $tag, $content = '', $doShortcode = false ){
+
 			$ok = false;
 
 			// NB csv = comma or space separated list...
@@ -460,7 +582,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 				//exclusions...
 				'exclude'             => '', // csv of menu item ids (an id may have a '+' appended, for inheritance, eg. '23+')
 				'exclude_level'       => '', // digit, possibly appended with a '+' or '-', eg. '2', '2+', or '2-'
-				'contains_current'    => '', // menu|primary|secondary|output
+				'contains_current'    => '', // menu|primary|secondary|inclusions|output
 				//determines fallback (current|parent|quit) and, optionally, fallback_siblings and/or fallback_depth...
 				'fallback'            => '', //eg. 'quit', or 'current' or 'current+siblings' or 'parent+siblings,2' or 'parent,1'
 				//switches...
@@ -475,6 +597,8 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 				'container_class'     => '',
 				'menu_class'          => 'menu-widget',
 				'widget_class'        => '',
+				//determines switch_if, switch_at & switch_to (depending on $content)...
+				'alternative'         => '', //csv of current|no-current|no-output and menu|primary|secondary|inclusions|output, eg. 'current,menu'
 				//determines before & after...
 				'wrap_link'           => '', // a tag name (eg. div, p, span, etc)
 				//determines link_before & link_after...
@@ -484,15 +608,25 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 				//utility : doesn't run widget! instead, lists all posts/pages that contain a CMW shortcode...
 				'findme'              => 0
 				),
-				apply_filters(
-					'custom_menu_wizard_shortcode_attributes',
-					array_merge( (array)$atts, array('cmwv' => self::$version) )
-				),
-				$tag // since WP3.6 this allows use of shortcode_atts_cmwizard filter, applied by shortcode_atts()
+				$doShortcode
+					? apply_filters(
+						'custom_menu_wizard_shortcode_attributes',
+						array_merge( (array)$atts, array('cmwv' => self::$version) )
+						)
+					: (array)$atts,
+				$doShortcode
+					? $tag // since WP3.6 this allows use of shortcode_atts_cmwizard filter, applied by shortcode_atts()
+					: ''
 			);
 
+			//if not decoding a main shortcode then we're looking at an alternative, and alternatives can't be
+			//nested, not can they run findme or change the title's tag element...
+			if( !$doShortcode ){
+				unset( $instance['findme'], $instance['title_tag'], $instance['alternative'] );
+			}
+
 			if( !empty( $instance['findme'] ) ){
-				return $this->find_shortcodes( $instance );
+				return $instance;
 			}
 
 			//in order of priority...
@@ -625,64 +759,54 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 				}
 				unset( $instance['wrap_link_text'] );
 
-				//handle widget_class here because we have full control over $before_widget...
-				$before_widget_class = array(
-					'widget_custom_menu_wizard',
-					'shortcode_custom_menu_wizard'
-					);
-				$instance['widget_class'] = empty( $instance['widget_class'] ) ? '' : esc_attr( trim ( $instance['widget_class'] ) );
-				if( !empty( $instance['widget_class'] ) ){
-					foreach( explode(' ', $instance['widget_class'] ) as $i ){
-						if( !empty( $i ) && !in_array( $i, $before_widget_class ) ){
-							$before_widget_class[] = $i;
+				//alternative => switch_if, switch_at & switch_to...
+				if( !empty( $instance['alternative'] ) ){
+					$i = preg_split( '/[\s,]+/', strtolower( $instance['alternative'] ), -1, PREG_SPLIT_NO_EMPTY );
+					foreach( $i as $j ){
+						if( in_array( $j, array('current', 'no-current', 'no-output' ) ) ){
+							$instance['switch_if'] = $j;
+						}elseif( in_array( $j, array('menu', 'primary', 'secondary', 'inclusions', 'output') ) ){
+							$instance['switch_at'] = $j;
 						}
-					} 
+					}
+					if( !empty( $instance['switch_if'] ) && !empty( $instance['switch_at'] ) ){
+						$instance['switch_to'] = apply_filters( 'custom_menu_wizard_sanitize_alternative', $instance['switch_to'] );
+					}else{
+						$instance['switch_if'] = $instance['switch_at'] = $instance['switch_to'] = '';
+					}
+					unset( $instance['alternative'] );
 				}
-				unset( $instance['widget_class'] );
 
 				//turn on hide_empty...
 				$instance['hide_empty'] = 1;
 			}
 
-			if( $ok ){
-				//not used by the plugin, but could be used in the widget code to tell whether it was being
-				//run as a result of a widget or a shortcode?...
-				$instance['shortcode'] = true;
-				//allow the element that wraps the widget title to be changed from an h2 (the WP default) to another tag...
-				//note : does not allow for changing the class, or for removing the wrapping element
-				//       for a class override, add CSS rule for
-				//         .shortcode_custom_menu_wizard .widgettitle { ..... }
-				//       can also be overriden using the 'custom_menu_wizard_shortcode_widget_args' filter (applied below)
-				$instance['title_tag'] = esc_attr( trim( $instance['title_tag'] ) );
-				if( empty( $instance['title_tag'] ) ){
-					//default to H2...
-					$instance['title_tag'] = 'h2';
+		 	return $ok ? $instance : false;
+
+		} //end shortcode_instance()
+
+		/**
+		 * hooked into custom_menu_wizard_encode_shortcode filter : converts a cmwizard shortcode into instance settings fit for 
+		 *                                                          the widget() method of Custom_Menu_Wizard_Widget
+		 * 
+		 * it's important to note that a shortcode processed this way does *NOT* hit the filters that a cmwizard shortcode would
+		 * normally hit, namely custom_menu_wizard_shortcode_attributes & shortcode_atts_cmwizard
+		 * 
+		 * @param string $shortcode A full [cmwizard .../] shortcode
+		 * @return array|boolean Instance settings, or false if error
+		 */
+		public function encode_shortcode( $shortcode = '' ){
+
+			if( preg_match( '/^cmwizard\s?(.*)$/', rtrim( ltrim( $shortcode, '[ ' ), '] /' ), $m ) > 0 ){
+				$instance = $this->shortcode_instance( shortcode_parse_atts( trim( $m[1] ) ), 'cmwizard' );
+				if( !empty( $instance ) ){
+					$instance['cmwv'] = self::$version;
+					$instance = Custom_Menu_Wizard_Widget::cmw_settings( $instance, false, 'widget' );
 				}
-				//apart from before_widget, these are lifted from the_widget() (wp-includes/widgets.php)...
-				$sidebar_args = array(
-					'before_widget' => '<div class="' . implode( ' ', $before_widget_class ) . '">',
-					'after_widget' => '</div>',
-					'before_title' => '<' . $instance['title_tag'] . ' class="widgettitle">',
-					'after_title' => '</' . $instance['title_tag'] . '>'
-					);
-				unset( $instance['title_tag'] );
-
-				ob_start();
-				the_widget(
-					'Custom_Menu_Wizard_Widget',
-					apply_filters(
-						'custom_menu_wizard_shortcode_settings',
-						array_merge( $instance, array('cmwv' => self::$version) )
-					),
-					apply_filters(
-						'custom_menu_wizard_shortcode_widget_args',
-						array_merge( $sidebar_args, array('cmwv' => self::$version) )
-					) );
-				$html = ob_get_clean();
 			}
-		 	return empty($html) ? '' : $html;
+			return empty( $instance ) ? false : $instance;
 
-		} //end shortcode()
+		} //end encode_shortcode()
 
 		/** 
 		 * shortcode processing for [custom_menu_wizard option="" option="" ...] (as of v2.1.0)

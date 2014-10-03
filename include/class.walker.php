@@ -68,6 +68,10 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			//since we've done all the depth filtering, set max_depth to unlimited (unless flat output was requested!)...
 			if( empty( $args->_custom_menu_wizard['flat_output'] ) ){
 				$max_depth = 0;
+			}else{
+				//for v3.1.0 we now need to specifically reset max_depth in case we're using the alternative and it has changed
+				//from hierarchic output to flat output...
+				$max_depth = -1;
 			}
 
 		} //ends the check for bad max depth, empty elements, or empty cmw args
@@ -141,25 +145,45 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			//     If orphans are required, use WordPress's own Custom Menu widget.
 			if( isset( $this->_cmw_tree[ $parentID ] ) ){
 				//check for current item (as a menu item ID, ie. a key into the tree)...
-				if( $item->current ){
+				if( $item->current || 
+						( isset( $inheritItems ) && ( $hasCurrentClass = in_array( 'current-menu-item', (array)$item->classes ) ) === true ) ||
+						( isset( $inheritItems ) && !empty( $cmw['fallback_ci_parent'] ) && $item->current_item_parent )
+						){
 					//should(!) never get either parent and/or ancestor on an item marked as "current", but unfortunately it does occur (grrr!).
 					//so this has to cope, not only with more than 1 "current" item, but also with "current" items that are incorrectly marked
 					//as (their own?!) parent and/or ancestor.
-					//we're going to look for correctly (solely) marked "current" items and take the first one found;
-					//failing that, look for a "current" item that is also marked as parent, and, again, use the first one found;
-					//failing that, look for a "current" item that is also marked as an ancestor, and, again, use the first one found.
 					//
-					//array keys, priority order : just current -> parent, not ancestor -> parent and ancestor -> ancestor
+					//v3.1.0 : there are also occasions when the item is given a class of current-menu-item but the 'current' property is not set
+					//on the item - one such occasion being when the home page is set to latest posts (the default 'blogging' setting for Front
+					//page displays, see Settings/Reading page) and you navigate to the second (or subsequent) page of listed posts. A menu item
+					//that has the "Home Page" url (it's a "custom" menu item type) will fail to match any sort of current url (.../page/2/
+					//or .../?paged=2) but does get recognised as being a "front page" url, so gets the class but no property! ON BY DEFAULT!
+					//v3.1.0 : also occasions where $item->current_item_parent is set without there being any item with $item->current!
+					//eg. open a post, and if there is a Category menu item available (the post has that category) then Category menu item
+					//gets marked as current_item_parent. HAS TO BE ENABLED!
+					//
+					//we're going to look for correctly (solely) marked "current" items and take the first one found
+					//failing that, look for a "current" item that is also marked as parent, and, again, use the first one found
+					//failing that, look for a "current" item that is also marked as an ancestor, and, again, use the first one found
+					//failing that, look for an item classed as "current-menu-item", again using the first one found
+					//finally, if enabled, look for an item marked as parent (if it gets used then there's no current!), using first one found
+					//
+					//array keys, priority order : 
+					// just current -> parent, not ancestor -> parent and ancestor -> ancestor -> "current-menu-item" -> parent
 					// first found...
 					// - a001 : just current
 					// - b001 : current & parent (not ancestor)
 					// - c001 : current & parent & ancestor
 					// - d001 : current & ancestor (not parent)
+					// - e001 : "current-menu-item"
+					// - f001 : parent (not current)
 					// next found...
 					// - a002 : just current
 					// - b002 : current & parent (not ancestor)
 					// - c002 : current & parent & ancestor
 					// - d002 : current & ancestor (not parent)
+					// - e002 : "current-menu-item"
+					// - f002 : parent (not current)
 					// etc
 					//example : 
 					// - 1st found : current & ancestor = d001
@@ -167,8 +191,25 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 					// - 3rd found : just current = a003
 					// - 4th found : current & parent = b004
 					// - 5th found : just current = a005
-					//reverse sort keys alphabetically and a003 comes out on bottom, so third found gets used! (copes with 999 "current" items; should be enough!)
-					$j = $item->current_item_ancestor ? ( $item->current_item_parent ? 'c' : 'd') : ( $item->current_item_parent ? 'b' : 'a' );
+					//reverse sort keys alphabetically and a003 comes out on bottom, so third found gets used! (copes with 999 "current" 
+					//items; should be enough!)
+					if( $item->current ){
+						if( $item->current_item_ancestor ){
+							if( $item->current_item_parent ){
+								$j = 'c';
+							}else{
+								$j = 'd';
+							}
+						}elseif( $item->current_item_parent ){
+							$j = 'b';
+						}else{
+							$j = 'a';
+						}
+					}elseif( $hasCurrentClass ){
+						$j = 'e';
+					}else{
+						$j = 'f';
+					}
 					$currentItem[ $j . sprintf( '%03d' , count( $currentItem ) + 1 ) ] = $itemID;
 				}
 
@@ -417,6 +458,55 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	} //end _cmw_set_keep_recursive()
 
 	/**
+	 * switch the current settings for those indicated by a cmwizard shortcode
+	 * 
+	 * @param object $args The args passed into walk()
+	 * @param string $at The current processing stage
+	 * @param boolean $hasCurrent Whether or not current item is in this stage
+	 * @param boolean $hasOutput Whether or not there will be any output (as best we know so far)
+	 * @return boolean True if we can use alternative settings
+	 */
+	private function _cmw_switch_settings( &$args, $at = '', $hasCurrent = false, $hasOutput = false ){
+
+		if( $args->_custom_menu_wizard['switch_at'] == $at && (
+				( $args->_custom_menu_wizard['switch_if'] == 'current' && $hasCurrent ) ||
+				( $args->_custom_menu_wizard['switch_if'] == 'no-current' && !$hasCurrent ) || 
+				( $args->_custom_menu_wizard['switch_if'] == 'no-output' && !$hasOutput )
+				) ){
+
+			$plugin = Custom_Menu_Wizard_Plugin::init();
+
+			//if switch_to is empty, it gets defaulted to a minimum
+			//trim off square brackets, self-terminators, and spaces...
+			$switchTo = trim( $args->_custom_menu_wizard['switch_to'], ' ][/' );
+			//if it doesn't start with our shortcode, prepend it...
+			if( substr( $switchTo . ' ', 0, 9 ) != 'cmwizard ' ){
+				$switchTo = 'cmwizard ' . $switchTo;
+			}
+			//append our current menu so that it will be used when the shortcode atts are parsed...
+			$switchTo = trim( $switchTo ) . ' menu=' . $args->_custom_menu_wizard['menu'];
+
+			if( ( $new_cmw = $plugin->encode_shortcode( $switchTo ) ) !== false ){
+				//store old...
+				$old_cmw = array_merge( array(), $args->_custom_menu_wizard );
+				//merge new into old, overriding _walker...
+				$new_cmw = array_merge( $old_cmw, (array)$new_cmw, array('_walker' => array('alternative' => true)) );
+				//overwrite current with new...
+				$args->_custom_menu_wizard = $new_cmw;
+				//put new and old into the current _walker, so that they become available to the widget
+				//instance (as long as there's some output!)...
+				$args->_custom_menu_wizard['_walker']['instances'] = array( 'old' => $old_cmw, 'new' => $new_cmw );
+				unset( $old_cmw );
+
+				return true;
+			}
+		}
+
+		return false;
+
+	} //end _cmw_switch_settings()
+
+	/**
 	 * legacy : recursively set the keep flag if within specified level/depth
 	 * runs through kids of item passed in : if kid is eligible, sets kid to kept; if grandkids might be eligible, recurse with kid
 	 * 
@@ -443,20 +533,55 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 	/**
 	 * pre-filters elements
 	 * 
+	 * @filters : custom_menu_wizard_walker_change_settings    array of current CMW settings; id of current menu item; array of original menu elements
+	 *            gets applied immediately after determination of the current item, and can be used to provide an alternate set of CMW settings
+	 *            based, maybe, on the value (presence/absence?) of a current menu item, or some other specific value in the current settings.
+	 *            if the returned settings don't exactly match those currently in use, then the new ones are used and current item is re-determined.
+	 * 
 	 * @param {object} $args Params supplied to wp_nav_menu()
 	 * @param {array} $elements Menu items
 	 * @return {array} Modified menu items
 	 */
 	private function _cmw_walk( &$args, $elements ){
 
-			$id_field = $this->db_fields['id']; //eg. = 'db_id'
-			$parent_field = $this->db_fields['parent']; //eg. = 'menu_item_parent'
+		$id_field = $this->db_fields['id']; //eg. = 'db_id'
+		$parent_field = $this->db_fields['parent']; //eg. = 'menu_item_parent'
+		$unlimited = 65532;
+		//max number of run-throughs is 2!...
+		$runCount = 2;
 
-			$unlimited = 65532;
+		$cmw =& $args->_custom_menu_wizard;
+
+		while( $runCount > 0 ){
+
+			$runCount--;
 			$topOfBranch = -1;
 			$continue = true;
 
-			$cmw =& $args->_custom_menu_wizard;
+			//find the current menu item (ID of the menu item) while creating the tree and levels arrays...
+			$currentItem = $this->_cmw_find_current_item( $elements, $cmw );
+
+			//allow (once only!) a filter to change the cmw settings based on the presence (or absence) of a current item...
+			//note that not all changes to settings will have any influence; if the walker doesn't use them, and
+			//the widget processing subsequent to the wp_nav_menu() call doesn't use them, then they will have no effect!
+			//also note that utilising this filter will prevent any subsequent switchable from being actioned (because of the runCount).
+			//BE AWARE : indiscriminate changes to the cmw settings have the potential to totally screw up the output!
+			$new_cmw = $runCount > 0 ? apply_filters( 'custom_menu_wizard_walker_change_settings', $cmw, $currentItem, $elements ) : false;
+			if( $new_cmw !== false && $new_cmw !== $cmw ){
+				//store old...
+				$old_cmw = array_merge( array(), $cmw );
+				//merge new into old, and don't allow modification of _walker...
+				$new_cmw = array_merge( $old_cmw, (array)$new_cmw, array('_walker' => array()) );
+				//overwrite current with new...
+				$args->_custom_menu_wizard = $new_cmw;
+				//put new and old into the current _walker, so that they become available to the widget 
+				//instance (as long as there's some output!)...
+				$cmw['_walker']['instances'] = array( 'old' => $old_cmw, 'new' => $new_cmw );
+				unset( $old_cmw );
+				//back to top of while loop...
+				continue;
+			}
+			unset( $new_cmw );
 
 			$cmw['_walker']['fellback'] = false;
 
@@ -465,14 +590,27 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 			$find_level = !$find_items && !$find_branch;
 			$find_current = $find_branch && empty( $cmw['branch'] );
 
-			//find the current menu item while creating the tree and levels arrays...
-			$currentItem = $this->_cmw_find_current_item( $elements, $cmw );
-
 			//measuring depth relative to the current item only applies if depth is *not* unlimited...
 			$depth = intval( $cmw['depth'] );
-			$depth_rel_current = $cmw['depth_rel_current'] && $depth > 0 && !empty( $currentItem ); //v2.0.0
+			$depth_rel_current = $cmw['depth_rel_current'] && $depth > 0 && $currentItem !== false; //v2.0.0
 			//no-kids fallback?...
 			$canFallback = $find_current && in_array( $cmw['fallback'], array('current', 'parent', 'quit') );
+			//switchable?...
+			//note that switchable does not require switch_to to contain a value!
+			$canSwitch = $runCount > 0 && !empty( $cmw['switch_if'] ) && !empty( $cmw['switch_at'] );
+
+			//check for current item and switch...
+			$hasCurrent = $currentItem !== false;
+			//no current item means that a current branch filter CAN'T produce output...
+			if( $find_current ){
+				$continue = $hasCurrent;
+			}
+			if( $continue && $cmw['contains_current'] == 'menu' ){
+				$continue = $hasCurrent;
+			}
+			if( $canSwitch && $this->_cmw_switch_settings( $args, 'menu', $hasCurrent, $continue ) ){
+				continue;
+			}
 
 			//PRIMARY FILTERS...
 			if( $continue ){
@@ -488,33 +626,28 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				if( $find_branch ){
 					//topOfBranch gets set to -1 if it can't be determined...
 					$topOfBranch = $find_current
-						? ( empty( $currentItem ) ? -1 : $currentItem )
+						? ( $currentItem === false ? -1 : $currentItem )
 						: ( isset( $this->_cmw_tree[ $cmw['branch'] ] ) ? $cmw['branch'] : -1 );
 					$theBranchItem = $topOfBranch;
 					$continue = $topOfBranch > 0;
 				}
 			} //end PRIMARIES
 
-			//check for current item...
-			//v3.0.4 : do this here (rather than above the primary filters) because I might need
-			//         $theBranchItem later on
-			//NB: check is for *any* requirement for current item, not just 'menu', because I don't want to have to 
-			//    continually check for $currentItem being non-empty ($find_current is already coped with in the primaries)
-			if( $continue && !empty( $cmw['contains_current'] ) ){
-				$continue = !empty( $currentItem );
+			//check for current item and switch...
+			$hasCurrent = $currentItem !== false;
+			if( $hasCurrent ){
+				if( ( $find_level && $this->_cmw_tree[ $currentItem ]['level'] < $cmw['level'] ) ||
+						( $find_items && !in_array( $currentItem, $cmw['__items'] ) ) ||
+						( $find_branch && $topOfBranch !== $currentItem && !in_array( $topOfBranch, $this->_cmw_tree[ $currentItem ]['ancestors'] ) )
+						){
+					$hasCurrent = false;
+				}
 			}
-
-			//check for current item...
 			if( $continue && $cmw['contains_current'] == 'primary' ){
-				if( $find_level ){
-					$continue = $this->_cmw_tree[ $currentItem ]['level'] >= $cmw['level'];
-				}
-				if( $find_items ){
-					$continue = in_array( $currentItem, $cmw['__items'] );
-				}
-				if( $find_branch ){
-					$continue = $topOfBranch == $currentItem || in_array( $topOfBranch, $this->_cmw_tree[ $currentItem ]['ancestors'] );
-				}
+				$continue = $hasCurrent;
+			}
+			if( $canSwitch && $this->_cmw_switch_settings( $args, 'primary', $hasCurrent, $continue ) ){
+				continue;
 			}
 
 			//SECONDARY FILTERS...
@@ -629,9 +762,13 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				$continue = $this->_cmw_tree[0]['keepCount'] > 0;
 			} //end SECONDARIES
 
-			//check for current item...
+			//check for current item and switch...
+			$hasCurrent = $currentItem !== false && $this->_cmw_tree[ $currentItem ]['keep'];
 			if( $continue && $cmw['contains_current'] == 'secondary' ){
-				$continue = $this->_cmw_tree[ $currentItem ]['keep'];
+				$continue = $hasCurrent;
+			}
+			if( $canSwitch && $this->_cmw_switch_settings( $args, 'secondary', $hasCurrent, $continue ) ){
+				continue;
 			}
 
 			//INCLUSIONS...
@@ -686,9 +823,13 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				}
 			} //end INCLUSIONS
 
-			//check for current item...
+			//check for current item and switch...
+			$hasCurrent = $currentItem !== false && $this->_cmw_tree[ $currentItem ]['keep'];
 			if( $continue && $cmw['contains_current'] == 'inclusions' ){
-				$continue = $this->_cmw_tree[ $currentItem ]['keep'];
+				$continue = $hasCurrent;
+			}
+			if( $canSwitch && $this->_cmw_switch_settings( $args, 'inclusions', $hasCurrent, $continue ) ){
+				continue;
 			}
 
 			//EXCLUSIONS...
@@ -696,9 +837,13 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				$continue = $this->_cmw_run_exclusions( $cmw );
 			} //end EXCLUSIONS
 
-			//check for current item...
+			//check for current item and switch...
+			$hasCurrent = $currentItem !== false && $this->_cmw_tree[ $currentItem ]['keep'];
 			if( $continue && $cmw['contains_current'] == 'output' ){
-				$continue = $this->_cmw_tree[ $currentItem ]['keep'];
+				$continue = $hasCurrent;
+			}
+			if( $canSwitch && $this->_cmw_switch_settings( $args, 'output', $hasCurrent, $continue ) ){
+				continue;
 			}
 
 			//check for title_from...
@@ -715,7 +860,7 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 					}
 				}
 				//might we want the current item's, or root item's, title as the widget title?...
-				if( !empty( $currentItem ) ){
+				if( $currentItem !== false ){
 					$cmw['_walker']['current_title'] = $elements[ $this->_cmw_tree[ $currentItem ]['element'][0] ]->title;
 					if( $this->_cmw_tree[ $currentItem ]['level'] > 1 ){
 						$topOfBranch = array_slice( $this->_cmw_tree[ $currentItem ]['ancestors'], 1, 1 );
@@ -794,6 +939,11 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 				}
 			}
 			unset( $substructure );
+
+			//kill the run count...
+			$runCount--;
+
+		} //end while
 
 		return $elements;
 
