@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
 Tested up to: 4.0
-Stable tag: 3.0.4
+Stable tag: 3.1.0
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -31,6 +31,7 @@ Features include:
 * Shortcode, `[cmwizard]`, available to run the widget from within content
 * Interactive "assist" to help with the widget settings and/or shortcode definition
 * Utility to find posts containing this plugin's shortcode
+* **NEW** Specify an alternative configuration to use under certain conditions (dual-scenario capability)
 
 Current documentation for the [Widget Options](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#WIDGET-OPTIONS), 
 and the associated [Shortcode Parameters](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#SHORTCODE-PARAMETERS), 
@@ -39,7 +40,13 @@ can be found under [Other Notes](http://wordpress.org/plugins/custom-menu-wizard
 **Please, do not be put off by the number of options available!** I suspect (and I admit that I'm guessing!) that for the majority of users 
 there are probably a couple of very common scenarios:
 
-1. Show the current menu item, plus any descendants...
+1. Show an entire menu...
+    * Drag a new Custom Menu Wizard widget into the sidebar, and give it a title (if you want one)
+    * Select the menu you wish to use (if it's not already selected)
+    * Save the widget!
+    * *Equivalent shortcode resembles `[cmwizard menu=N title="Your Title"/]`*
+
+2. Show the current menu item, plus any descendants...
     * Drag a new Custom Menu Wizard widget into the sidebar, and give it a title (if you want one)
     * Select the menu you wish to use (if it's not already selected)
     * Open the FILTERS section :
@@ -47,7 +54,7 @@ there are probably a couple of very common scenarios:
     * Save the widget!
     * *Equivalent shortcode resembles `[cmwizard menu=N title="Your Title" branch=current/]`*
 
-2. Show just the descendants of the current menu item (if there are any)...
+3. Show just the descendants of the current menu item (if there are any)...
     * Drag a new Custom Menu Wizard widget into the sidebar, and give it a title (if you want one)
     * Select the menu you wish to use (if it's not already selected)
     * Open the FILTERS section :
@@ -233,7 +240,7 @@ or below the `Starting at` level, and do not include any items that would break 
 * **Current Item is in** *select*
 
     This allows you to specify that there only be any output shown when/if the current menu item is one of the menu items selected
-    for output at a particular stage in the filter proccessing.
+    for output at a particular stage in the filter processing.
 
     * *"Menu"* : the current menu item has to be somewhere within the selected menu.
     * *"Primary Filter"* : the current menu item has to be within the scope of the selected primary filter. So if you selected, say, a child
@@ -245,10 +252,10 @@ or below the `Starting at` level, and do not include any items that would break 
 
 == Fallbacks Section ==
 
-Fallbacks get applied at the Secondary Filter stage, and their eligibility and application are therefore determined and 
-governed by the other Secondary Filter settings.
+The **"If Current Item has no children"** fallback gets applied at the Secondary Filter stage, and its eligibility and 
+application are therefore determined and governed by the other Secondary Filter settings.
 
-There is one fallback, and it only comes into play (possibly) when a `Branch` filter
+It only comes into play (possibly) when a `Branch` filter 
 is set as "Current Item", and the `Starting at` and `For Depth` settings are such that the output should start at or below the current item,
 and would normally include some of the current item's descendants (eg. `Starting at` "the Branch", `For Depth` "1 level" does *not* invoke 
 the fallback). 
@@ -280,6 +287,16 @@ The fallback allows for the occasion when the current menu item
     no children, whereas C has loads of children/grandchildren. If you fallback to B's parent - A - with Unlimited depth set, then you will
     get A, B, C, and *all* C's dependents! You may well want to override depth to limit the output to, say, just A, B and C, by setting this
     fallback option to "1"? Or maybe A, B, C, and C's immediate children, by setting "2"?
+
+The **"If no Current Item can be found"** fallback is new to v3.1.0. It gets applied right at the start of processing, when determining 
+which of the menu items (if any) should be regarded as the unique "Current Item" by this widget. Under certain conditions, WordPress 
+will mark an item as being the parent of a current item ... but there won't actually be a current item marked! This occurs, for example, 
+when displaying a full post for which there is no specific related menu item, yet there *is* a menu item for a Category that the 
+displayed post belongs to : WordPress will then mark the related Category as being the parent of the current item (the post) even though 
+it can't mark the post as being the current item (because there's no specific item for it within the menu).
+
+Enabling this fallback will make the widget look for these situations - only as a last resort! - and set (one of) the found "parent" item(s) 
+as the Current Item.
 
 == Output Section ==
 
@@ -363,6 +380,34 @@ The fallback allows for the occasion when the current menu item
 * **After the Link Text** *textbox*
 
     Text or HTML that will be placed immediately after each menu item's link text.
+
+== Alternative Section ===
+
+This is new at v3.1.0 and provides a limited dual-scenario capability, based on a couple of conditions. For example, let's say you 
+want to show the Current Item and its immediate children, *but* if there isn't a Current Item then you want to show the top 2 levels 
+of the menu : previously this was not possible solely with CMW, but now you can configure the main widget settings for the "current item"
+scenario, and add an Alternative setting for when no Current Item can be determined.
+
+* **On condition** *2 selects*
+
+    Select the appropriate condition for when your Alternative configuration should be used, and also the stage within the 
+    Filter processing when this condition should be tested for (similar to the Qualifier, `Current Item is in`). You need 
+    values in both selects for the Alternative to be considered.
+
+* **Then switch settings to** *textarea*
+
+    This should contain a CMW-generated shortcode equivalent of the configuration that you want to switch to. Please note that leaving 
+    this empty will **not** prevent the Alternative kicking in if the conditions are set and met! An empty `switch to` will merely default 
+    to the CMW's base settings (Level 1, unlimited Depth). Also note that Alternatives cannot be nested : a primary configuration is
+    allowed one chance to switch and that's it, so providing an Alternative-that-has-an-Alternative will not work.
+    
+    The Assist *will work* with an Alternative - in that it displays the appropriate output - but it can get confusing as to which 
+    configuration set is being used. There is a message displayed whenever the Alternative kicks in (green if successful, red if it 
+    should have kicked in but couldn't due to an error in the alternative settings) so please take note of it, because the Assist 
+    *cannot* be used to modify the Alternative settings, only the primary ones.
+
+A bit more information about the Alternative is available 
+in [this article](http://www.wizzud.com/2014/10/03/custom-menu-wizard-wordpress-plugin-version-3-1/).
 
 == SHORTCODE PARAMETERS ==
 
@@ -469,7 +514,7 @@ under [Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_no
 for an explanation of the respective settings.
 
 = fallback =
-*string* : There are 2 main options for fallback (ref. [Fallbacks Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Fallbacks-Section) above)...
+*string* : There are 2 main options for the *"If Current Item has no children"* fallback (ref. [Fallbacks Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Fallbacks-Section) above)...
 
 * *"parent"* : Sets the widget's `Starting at` Fallback option to "-1 (parent)"
 * *"current"* : Sets the widget's `Starting at` Fallback option to "the Current Item"
@@ -480,6 +525,10 @@ will also set the widget's `For Depth` fallback option to the value of the digit
 Optionally, "+siblings" can also be used (comma-separated, with or without a depth digit) to indicate that siblings of the "parent" or 
 "current" fallback item should also be included. The order of the comma-separated values is not important, so "current,+siblings,1" is the 
 same as "current,1,+siblings", and "2,parent" is the same as "parent,2", etc.
+
+= fallback_ci_parent =
+*switch, off by default, 1 to enable* : See widget's *"If no Current Item can be found"* fallback in the 
+[Fallbacks Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Fallbacks-Section) above.
 
 = flat_output =
 *switch, off by default, 1 to enable* : See widget's `Flat` option, under [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section) above.
@@ -523,6 +572,42 @@ Please note that the shortcode usage - a simple tag name - is much more restrict
 and sent through to the widget as its `Before the Link Text` and `After the Link Text` options (ref. [Links Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Links-Section)). 
 Please note that the shortcode usage - a simple tag name - is much more restrictive than the widget's options, which allow HTML.
 
+= alternative =
+*string* : This is 2 settings separated by a comma, reflecting the `On condition` options under the 
+[Alternative Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Alternative-Section) above.
+Possible values are:
+
+* One of "current", "no-current" or "no-output" : the condition to test for
+* One of "menu", "primary", "secondary", "inclusions", or "output" : the stage at which to test the condition
+
+Eg. `alternative="no-current,inclusions"` would test for the absence of a Current Item in the filtered menu items, having completed 
+the Inclusions stage, and attempt to switch to the Alternative settings.
+
+The actual Alternative settings - a cut-down shortcode - are placed as content between the shortcodes start and end tags, and this is 
+the only time that the use of a self-terminating shortcode is not sufficient. When specifiying the Alternative settings, *do not* 
+include the square brackets, otherwise WordPress will interpret it as a nested shortcode!
+
+For example, to set a primary configuration of "show Current Branch plus any kids", with an Alternative of "show top 2 levels" if no 
+current item can be found anywhere in the menu...
+
+`[cmwizard menu=NN branch=current alternative="no-current,menu"]depth=2[/cmwizard]`
+
+Alternatively, you could switch it around and say the primary configuration is "show top 2 levels", with an Alternative of 
+"show Current Branch plus kids" if a current item *can* be found within the menu...
+
+`[cmwizard menu=NN depth=2 alternative="current,menu"]branch=current[/cmwizard]`
+
+Note that Alternative (eg. "branch=current") does not require a `menu` option, because you can't change the menu so the primary
+configuration's setting is always used.
+
+As ever, the best way to construct a full shortcode, including an alternative, is to use the Assist : Use one instance of the CMW
+widget to build your Alternative settings, copy the equivalent shortcode into the Alternative option of a second instance of the CMW 
+widget, and then continue configuring that second instance to be your primary configuration; your final shortcode can simply be lifted
+from the second instance!
+
+A bit more information about the Alternative option is available 
+in [this article](http://www.wizzud.com/2014/10/03/custom-menu-wizard-wordpress-plugin-version-3-1/).
+
 = title_tag =
 *string* : An optional tag name (eg. "h1", "h3", etc) to replace the default "h2" used to enclose the widget title.
 Please note that this option has no equivalent in the widget options, because it *only* applies when a widget is instantiated via a shortcode.
@@ -559,6 +644,12 @@ Example : `[cmwizard findme=1 title="Posts containing a CMW shortcode..."/]`
 
     `
     [cmwizard menu="animals" branch="small animals" start_at=children contains_current=primary/]
+    `
+
+* Show the entire "main" menu entitled "Main Menu" *unless* there's a current menu item, in which case show the current menu item, its siblings and its immediate children, and entitle it "Nearest and Dearest!"
+
+    `
+    [cmwizard menu=main title="Main Menu"]title="Nearest and Dearest!" branch=current depth=2 siblings=1[/cmwizard]
     `
 
 == Installation ==
@@ -608,6 +699,9 @@ The red cross to the left of each menu item toggles the Exclusions setting for t
 
 Just click through the toggle states. When the Primary Filter is set to "Items", the green tick buttons to the right of each menu item 
 work in the same way.
+
+Note that if a green "Alternate settings" message is showing then the ticks and crosses buttons will show the approriate Alternative
+settings but they will be slightly opaque and they will *not* be clickable!
 
 Once you are happy with the results, having tested all possible settings of "current menu item" (if it applies), then simply Save the widget. 
 Alternatively, copy-paste the shortcode text - at the base of either the "assist" or the widget form - straight into your post (you do **not** need to Save the widget!).
@@ -670,9 +764,17 @@ Note that output from this shortcode extension is restricted to users with edit_
 5. Container Section
 6. Classes Section
 7. Links Section
-8. Widget's "assist"
+8. Alternative Section
+9. Widget's "assist"
 
 == Changelog ==
+
+= 3.1.0 =
+* addition : new Alternative section which takes a cmwizard shortcode and conditionally applies it as an entirely new widget configuration
+* addition : new fallback switch which enables an item marked as current_item_parent to be used as current item when no other current item is found
+* bugfix : updated the determination of current item so that a paged (?paged=2, etc) Home page still shows Home page as being current
+* bugfix : fixed code introduced in v3.0.4 that prevented CMW script loading on the customizer page - when the Widget Customizer plugin is loaded - for WordPress v3.8 and below
+* bugfix : stop disabling selected fields based on other settings, because this caused the customizer to wipe values that may have been still required
 
 = 3.0.4 =
 * bugfix : corrected the display of the "No Current Item!" warning in the "assist"
@@ -792,6 +894,11 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.1.0 =
+Added an Alternative section which gives a dual-scenario capability, such as "show Config A, but if a current item is present then show Config B"
+Added a new option to enable a "last resort" determination of current item as being an item marked as the parent of a current item, even though no current item is actually present.
+Fixed a bug with the paging of a Home blogging page, and stopped disabling widget fields so that the customizer does not "lose" values. Also fixed customizer for WordPress pre v3.9 running Widget Customizer plugin.
 
 = 3.0.4 =
 Fixed a couple of minor bugs with the "assist" and the widget form, and corrected a bug with accessibility mode when javascript is enabled.
