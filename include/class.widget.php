@@ -1462,6 +1462,14 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			if( $instance['start_mode'] == 'level' ){
 				$args['start_mode'] = 'level';
 			}
+			//allow_all_root is only applicable to byBranch...
+			//NB this could be refined further, in that it only comes into play if 
+			//   (a) start_mode is set to level, or
+			//   (b) there is a no-kids fallback set that produces output AND asks for siblings
+			//but that gets a bit fussy so I'm leaving it as-is. 
+			if( $instance['allow_all_root'] ){
+				$args['allow_all_root'] = 1;
+			}
 		}
 		//specifying items set byItems, overriding byLevel & byBranch...
 		if( $byItems ){
@@ -1526,7 +1534,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 			$args['title_from'] = $n;
 		}
 		//switches...
-		foreach( array('allow_all_root', 'siblings', 'flat_output', 'ol_root', 'ol_sub', 'fallback_ci_parent') as $n ){
+		foreach( array('siblings', 'flat_output', 'ol_root', 'ol_sub', 'fallback_ci_parent') as $n ){
 			if( $instance[ $n ] ){
 				$args[ $n ] = 1;
 			}

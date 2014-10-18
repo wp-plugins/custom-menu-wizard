@@ -1023,6 +1023,10 @@ jQuery(function($){
 				if(settings.start_mode === 'level'){
 					args.start_mode = 'level';
 				}
+				//allow_all_root is only applicable to byBranch...
+				if( settings.allow_all_root ){
+					args.allow_all_root = 1;
+				}
 			}
 			//specifying items set byItems, overriding byLevel & byBranch...
 			if(byItems){
@@ -1089,7 +1093,7 @@ jQuery(function($){
 				args.title_from = n;
 			}
 			//switches...
-			for(n in {allow_all_root:1, siblings:1, flat_output:1, ol_root:1, ol_sub:1, fallback_ci_parent:1}){
+			for(n in {siblings:1, flat_output:1, ol_root:1, ol_sub:1, fallback_ci_parent:1}){
 				if(settings[n]){
 					args[n] = 1;
 				}

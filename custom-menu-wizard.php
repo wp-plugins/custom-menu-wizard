@@ -3,13 +3,17 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 3.1.0
+ * Version: 3.1.1
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 defined( 'ABSPATH' ) or exit();
 /*
+ * v3.1.1 change log
+ * - fixed bug : only show the allow_all_root setting in the shortcode equivalent if the primary filter is by branch
+ * - added work-around for occasions when a theme causes de-registration of the widget which prevents the shortcode working in content
+ * 
  * v3.1.0 change log
  * - added an Alternative section which takes a cmwizard shortcode and conditionally applies it as an entirely new widget configuration
  * - added fallback determination (has to be enabled) for no current item found as using items marked as current_item_parent (first found)
@@ -139,8 +143,9 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 	//declare the main plugin class...
 	class Custom_Menu_Wizard_Plugin {
 		
-		public static $version = '3.1.0';
+		public static $version = '3.1.1';
 		public static $script_handle = 'custom-menu-wizard-plugin-script';
+		public static $widget_class = 'Custom_Menu_Wizard_Widget';
 		protected static $instance;
 		
 		/**
@@ -404,7 +409,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 		public function widget_and_shortcode(){
 
 			//register the widget class...
-			register_widget( 'Custom_Menu_Wizard_Widget' );
+			register_widget( self::$widget_class );
 			//add shortcode...
 			add_shortcode( 'cmwizard', array( &$this, 'shortcode' ) );
 			//add shortcode, v2.1.0 version (deprecated!)...
@@ -486,6 +491,25 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 			}
 
 			if( $ok ){
+
+				//if widget isn't registered(!), try re-registering; if still not registered, cop out...
+				if( !$this->widget_registered() ){
+					if( did_action( 'widgets_init' ) > 0 ){
+						if( apply_filters( 'custom_menu_wizard_widget_reregister', true )  ){
+							//re-register the widget...
+							register_widget( self::$widget_class );
+							if( !$this->widget_registered() ){
+								return WP_DEBUG ? __('[cmwizard PROBLEM="widget de-registered, and failed to re-register!"/]') : $html;
+							}
+						}else{
+							return WP_DEBUG ? __('[cmwizard PROBLEM="widget de-registered, and not allowed to re-register!"/]') : $html;
+						}
+					}else{
+						//hasn't had a chance to register yet!...
+						return WP_DEBUG ? __('[cmwizard PROBLEM="widgets have not been initialised yet!"/]') : $html;
+					}
+				}
+
 				//handle widget_class here because we have full control over $before_widget...
 				$before_widget_class = array(
 					'widget_custom_menu_wizard',
@@ -524,10 +548,10 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 					'after_title' => '</' . $instance['title_tag'] . '>'
 					);
 				unset( $instance['title_tag'] );
-
+				
 				ob_start();
 				the_widget(
-					'Custom_Menu_Wizard_Widget',
+					self::$widget_class,
 					apply_filters(
 						'custom_menu_wizard_shortcode_settings',
 						array_merge( $instance, array('cmwv' => self::$version) )
@@ -620,7 +644,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 			);
 
 			//if not decoding a main shortcode then we're looking at an alternative, and alternatives can't be
-			//nested, not can they run findme or change the title's tag element...
+			//nested, nor can they run findme or change the title's tag element...
 			if( !$doShortcode ){
 				unset( $instance['findme'], $instance['title_tag'], $instance['alternative'] );
 			}
@@ -797,7 +821,8 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 		 */
 		public function encode_shortcode( $shortcode = '' ){
 
-			if( preg_match( '/^cmwizard\s?(.*)$/', rtrim( ltrim( $shortcode, '[ ' ), '] /' ), $m ) > 0 ){
+			if( class_exists( self::$widget_class ) && 
+					preg_match( '/^cmwizard\s?(.*)$/', rtrim( ltrim( $shortcode, '[ ' ), '] /' ), $m ) > 0 ){
 				$instance = $this->shortcode_instance( shortcode_parse_atts( trim( $m[1] ) ), 'cmwizard' );
 				if( !empty( $instance ) ){
 					$instance['cmwv'] = self::$version;
@@ -807,6 +832,19 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 			return empty( $instance ) ? false : $instance;
 
 		} //end encode_shortcode()
+
+		/**
+		 * checks that the widget is registered
+		 * 
+		 * @return boolean True if registered
+		 */
+		public function widget_registered(){
+			global $wp_widget_factory;
+
+			return ( isset( $wp_widget_factory->widgets[ self::$widget_class ] ) &&
+					is_a( $wp_widget_factory->widgets[ self::$widget_class ], self::$widget_class ) );
+
+		}
 
 		/** 
 		 * shortcode processing for [custom_menu_wizard option="" option="" ...] (as of v2.1.0)
