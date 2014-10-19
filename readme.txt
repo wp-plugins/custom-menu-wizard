@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
 Tested up to: 4.0
-Stable tag: 3.1.0
+Stable tag: 3.1.1
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -769,6 +769,10 @@ Note that output from this shortcode extension is restricted to users with edit_
 
 == Changelog ==
 
+= 3.1.1 =
+* bugfix : only show the allow_all_root setting in the shortcode equivalent if the primary filter is by branch
+* addition : work-around for when a theme inadvertently(!) de-registers the widget, which then prevents the shortcode working
+
 = 3.1.0 =
 * addition : new Alternative section which takes a cmwizard shortcode and conditionally applies it as an entirely new widget configuration
 * addition : new fallback switch which enables an item marked as current_item_parent to be used as current item when no other current item is found
@@ -894,6 +898,10 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.1.1 =
+Added a work-around for when a theme inadvertently(!) de-registers the widget, which then prevents the shortcode working.
+Fixed a trivial bug where the allow_all_root setting was being unnecessarily shown in the widget's shortcode equivalent.
 
 = 3.1.0 =
 Added an Alternative section which gives a dual-scenario capability, such as "show Config A, but if a current item is present then show Config B"
