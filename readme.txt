@@ -381,7 +381,7 @@ as the Current Item.
 
     Text or HTML that will be placed immediately after each menu item's link text.
 
-== Alternative Section ===
+== Alternative Section ==
 
 This is new at v3.1.0 and provides a limited dual-scenario capability, based on a couple of conditions. For example, let's say you 
 want to show the Current Item and its immediate children, *but* if there isn't a Current Item then you want to show the top 2 levels 
