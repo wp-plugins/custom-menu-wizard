@@ -1,10 +1,10 @@
 === Custom Menu Wizard Widget ===
 Contributors: wizzud
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KP2LVCBXNCEB4
-Tags: menu,widget,widgets,navigation,nav,custom menus,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
+Tags: menu,widget,navigation,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
 Tested up to: 4.0
-Stable tag: 3.1.1
+Stable tag: 3.1.2
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -33,9 +33,10 @@ Features include:
 * Utility to find posts containing this plugin's shortcode
 * **NEW** Specify an alternative configuration to use under certain conditions (dual-scenario capability)
 
-Current documentation for the [Widget Options](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#WIDGET-OPTIONS), 
-and the associated [Shortcode Parameters](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#SHORTCODE-PARAMETERS), 
-can be found under [Other Notes](http://wordpress.org/plugins/custom-menu-wizard/other_notes/).
+Current documentation for the **Widget Options** can be found 
+under [Other Notes](http://wordpress.org/plugins/custom-menu-wizard/other_notes/). 
+The associated **Shortcode Parameters** are documented 
+under [Installation](http://wordpress.org/plugins/custom-menu-wizard/installation/) (too much text to fit all on one page!).
 
 **Please, do not be put off by the number of options available!** I suspect (and I admit that I'm guessing!) that for the majority of users 
 there are probably a couple of very common scenarios:
@@ -77,7 +78,8 @@ or [here](http://www.wizzud.com/v210-readme.html).*
 There are quite a few options, which makes the widget settings box very long. I have therefore grouped most of the options into
 collapsible logical sections (with remembered state once saved).
 
-Note that certain options may be enabled/disabled depending on your choice of primary, and possibly secondary, filters.
+The associated **SHORTCODE PARAMETERS** are documented 
+under [Installation](http://wordpress.org/plugins/custom-menu-wizard/installation/).
 
 ***Always Visible***
 
@@ -406,10 +408,25 @@ scenario, and add an Alternative setting for when no Current Item can be determi
     should have kicked in but couldn't due to an error in the alternative settings) so please take note of it, because the Assist 
     *cannot* be used to modify the Alternative settings, only the primary ones.
 
-A bit more information about the Alternative is available 
+A bit more information about the **Alternative** is available 
 in [this article](http://www.wizzud.com/2014/10/03/custom-menu-wizard-wordpress-plugin-version-3-1/).
 
-== SHORTCODE PARAMETERS ==
+== Installation ==
+
+1. EITHER Upload the zip package via 'Plugins > Add New > Upload' in your WP Admin
+
+    OR Extract the zip package and upload `custom-menu-wizard` folder to the `/wp-content/plugins/` directory
+
+1. Activate the plugin through the 'Plugins' menu in your WP Admin
+
+The widget will now be available in the 'Widgets' admin page. 
+As long as you already have at least one Custom Menu defined, you can add the new widget to a sidebar and configure it however you want. 
+Alternatively, you can use the shortcode in your content.
+
+Current documentation for the **Widget Options** can be found 
+under [Other Notes](http://wordpress.org/plugins/custom-menu-wizard/other_notes/). 
+
+= SHORTCODE PARAMETERS =
 
 *NB. Version 2 documentation is [here](http://plugins.svn.wordpress.org/custom-menu-wizard/tags/3.0.0/v210-readme.html#Shortcode-Parameters).*
 
@@ -448,7 +465,7 @@ that has menu items attached to it, and use that.
 = start_at =
 *string* : This is only relevant to a `Branch` filter, and consists of a signed or unsigned integer that indicates either a relative 
 (to the selected branch item) or absolute level to start your output at (ref. the widget's `Starting at` option under *Secondary Filter*, 
-[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above). 
+[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section)). 
 By default the starting level for output is the branch item's level. A relative level is indicated by a signed (ie. preceded by 
 a "+" or "-") integer, eg. `start_at="+1"`, while an absolute level is unsigned, eg. `start_at="1"`. Some examples :
 
@@ -464,33 +481,33 @@ in an item is at or above the selected branch item (relatively or absolutely).
 Setting `start_mode="level"` forces the widget to use not only the resultant starting item 
 and its relevant descendants, but also all that item's siblings *and their descendants* 
 (ref. the widget's `Level` radio option under *Secondary Filter*, 
-[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above).
+[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section)).
 
 = allow_all_root =
 *switch, off by default, 1 to enable* : See widget's `Allow all Root Items` option, under *Secondary Filter*,
-[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above.
+[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section).
 
 = depth =
 *integer, default 0 (unlimited)* : See widget's `For Depth` option, under *Secondary Filter*,
-[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above.
+[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section).
 
 = depth_rel_current =
 *switch, off by default, 1 to enable* : See widget's `Relative to Current Item` option, under *Secondary Filter*,
-[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above.
+[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section).
     
 = ancestors =
 *integer, default 0 (off)* : Sets an absolute level (positive integer), or a relative number of levels (negative integer), for which
 the ancestors of the `Branch` filter item should be included. See widget's `Branch Ancestors` option, under *Inclusions*, 
-[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above. (only relevant to a `Branch` filter)
+[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section). (only relevant to a `Branch` filter)
 
 = ancestor_siblings =
 *integer, default 0 (off)* : Sets an absolute level (positive integer), or a relative number of levels (negative integer), for which
 the siblings of ancestors of the `Branch` filter item should be included. See widget's `... with Siblings` option, under *Inclusions*, 
-[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above. (only relevant to a `Branch` filter)
+[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section). (only relevant to a `Branch` filter)
 
 = siblings =
 *switch, off by default, 1 to enable* : See widget's `Branch Siblings` option, under *Inclusions*, 
-[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above. (only relevant to a `Branch` filter)
+[Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section). (only relevant to a `Branch` filter)
 
 = include_level =
 *string* : A level (1, 2, 3, etc), optionally followed by a "+" or "-" to include all subsequent (lower) or prior (higher) 
@@ -510,11 +527,11 @@ and "2+" would exclude all items at level 2 or greater.
 
 = contains_current =
 *string* : Accepted values : "menu", "primary", "secondary", "inclusions", or "output". See widget's *Qualifier* options,
-under [Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section) above, 
+under [Filters Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Filters-Section), 
 for an explanation of the respective settings.
 
 = fallback =
-*string* : There are 2 main options for the *"If Current Item has no children"* fallback (ref. [Fallbacks Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Fallbacks-Section) above)...
+*string* : There are 2 main options for the *"If Current Item has no children"* fallback (ref. [Fallbacks Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Fallbacks-Section))...
 
 * *"parent"* : Sets the widget's `Starting at` Fallback option to "-1 (parent)"
 * *"current"* : Sets the widget's `Starting at` Fallback option to "the Current Item"
@@ -528,13 +545,13 @@ same as "current,1,+siblings", and "2,parent" is the same as "parent,2", etc.
 
 = fallback_ci_parent =
 *switch, off by default, 1 to enable* : See widget's *"If no Current Item can be found"* fallback in the 
-[Fallbacks Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Fallbacks-Section) above.
+[Fallbacks Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Fallbacks-Section).
 
 = flat_output =
-*switch, off by default, 1 to enable* : See widget's `Flat` option, under [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section) above.
+*switch, off by default, 1 to enable* : See widget's `Flat` option, under [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section).
 
 = title_from =
-*string* : Supply one or more (by separating them with a comma, eg. `title_from="branch,current"`) of the following (ref. the widget's `Set Title from` options, under [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section) above)...
+*string* : Supply one or more (by separating them with a comma, eg. `title_from="branch,current"`) of the following (ref. the widget's `Set Title from` options, under [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section))...
 
 * *"current"* : enables the widget's *Current Item* `Set Title from` option
 * *"current-root"* : enables the widget's *...or its Root* option that relates to the `Current Item` `Set Title from` option
@@ -542,25 +559,25 @@ same as "current,1,+siblings", and "2,parent" is the same as "parent,2", etc.
 * *"branch-root"* : enables the widget's *...or its Root* option that relates to the `Branch` `Set Title from` option
 
 = ol_root =
-*switch, off by default, 1 to enable* : See widget's `Top Level` option, under *Change UL to OL* in the [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section) above.
+*switch, off by default, 1 to enable* : See widget's `Top Level` option, under *Change UL to OL* in the [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section).
 
 = ol_sub =
-*switch, off by default, 1 to enable* : See widget's `Sub-Levels` option, under *Change UL to OL* in the [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section) above.
+*switch, off by default, 1 to enable* : See widget's `Sub-Levels` option, under *Change UL to OL* in the [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section).
 
 = container =
-*string* : See widget's `Element` option, under [Container Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Container-Section) above.
+*string* : See widget's `Element` option, under [Container Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Container-Section).
 
 = container_id =
-*string* : See widget's `Unique ID` option, under [Container Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Container-Section) above.
+*string* : See widget's `Unique ID` option, under [Container Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Container-Section).
 
 = container_class =
-*string* : See widget's `Class` option, under [Container Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Container-Section) above.
+*string* : See widget's `Class` option, under [Container Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Container-Section).
 
 = menu_class =
-*string* : See widget's `Menu Class` option, under [Classes Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Classes-Section) above.
+*string* : See widget's `Menu Class` option, under [Classes Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Classes-Section).
 
 = widget_class =
-*string* : See widget's `Widget Class` option, under [Classes Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Classes-Section) above.
+*string* : See widget's `Widget Class` option, under [Classes Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Classes-Section).
 
 = wrap_link =
 *string* : This is an optional tag name (eg. "div", "p", "span") that, if provided, will be made into HTML start/end tags
@@ -574,7 +591,7 @@ Please note that the shortcode usage - a simple tag name - is much more restrict
 
 = alternative =
 *string* : This is 2 settings separated by a comma, reflecting the `On condition` options under the 
-[Alternative Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Alternative-Section) above.
+[Alternative Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Alternative-Section).
 Possible values are:
 
 * One of "current", "no-current" or "no-output" : the condition to test for
@@ -620,7 +637,7 @@ from any widget's "assist".
 
 Example : `[cmwizard findme=1 title="Posts containing a CMW shortcode..."/]`
 
-== Shortcode Examples ==
+= SHORTCODE EXAMPLES =
 
 * Show the entire "main" menu
 
@@ -651,18 +668,6 @@ Example : `[cmwizard findme=1 title="Posts containing a CMW shortcode..."/]`
     `
     [cmwizard menu=main title="Main Menu"]title="Nearest and Dearest!" branch=current depth=2 siblings=1[/cmwizard]
     `
-
-== Installation ==
-
-1. EITHER Upload the zip package via 'Plugins > Add New > Upload' in your WP Admin
-
-    OR Extract the zip package and upload `custom-menu-wizard` folder to the `/wp-content/plugins/` directory
-
-1. Activate the plugin through the 'Plugins' menu in your WP Admin
-
-The widget will now be available in the 'Widgets' admin page. 
-As long as you already have at least one Custom Menu defined, you can add the new widget to a sidebar and configure it however you want. 
-Alternatively, you can use the shortcode in your content.
 
 == Frequently Asked Questions ==
 If you have a question or problem that is not covered here, please use the [integrated Support forum](http://wordpress.org/support/plugin/custom-menu-wizard).
@@ -768,6 +773,9 @@ Note that output from this shortcode extension is restricted to users with edit_
 9. Widget's "assist"
 
 == Changelog ==
+
+= 3.1.2 =
+* modified the readme : documentation for the Shortcode Parameters has been moved to the Installation page (to avoid being truncated)
 
 = 3.1.1 =
 * bugfix : only show the allow_all_root setting in the shortcode equivalent if the primary filter is by branch
@@ -898,6 +906,9 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.1.2 =
+No code changes, just moved the readme's Shortcode Parameters documentation onto the Installation page (to avoid being truncated).
 
 = 3.1.1 =
 Added a work-around for when a theme inadvertently(!) de-registers the widget, which then prevents the shortcode working.
