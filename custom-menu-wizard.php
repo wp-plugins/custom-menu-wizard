@@ -3,13 +3,17 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 3.1.1
+ * Version: 3.1.2
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 defined( 'ABSPATH' ) or exit();
 /*
+ * v3.1.2 change log
+ * - modification of the readme to avoid WordPress truncating documentation under Other Notes
+ * No code changes.
+ * 
  * v3.1.1 change log
  * - fixed bug : only show the allow_all_root setting in the shortcode equivalent if the primary filter is by branch
  * - added work-around for occasions when a theme causes de-registration of the widget which prevents the shortcode working in content
@@ -143,7 +147,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 	//declare the main plugin class...
 	class Custom_Menu_Wizard_Plugin {
 		
-		public static $version = '3.1.1';
+		public static $version = '3.1.2';
 		public static $script_handle = 'custom-menu-wizard-plugin-script';
 		public static $widget_class = 'Custom_Menu_Wizard_Widget';
 		protected static $instance;
