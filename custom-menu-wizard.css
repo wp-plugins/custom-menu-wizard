@@ -80,8 +80,8 @@ a.widget-custom-menu-wizard-fieldset.cmw-collapsed-fieldset:active {background-p
 .cmw-assistance-dialog .cmw-dialog-fixed-absolute .ui-button-text {line-height:1; padding:1px 0.35em 1px 1.3em;}
 .cmw-assistance-dialog .cmw-dialog-fixed-absolute .ui-button-icon-primary {left:0.1em;}
 .cmw-assistance-dialog .ui-dialog-title {width:65% !important;}
-/*...for customizer, make sure the assist goes above .wp-full-overlay...*/
-.wp-customizer .cmw-assistance-dialog {z-index:600000;}
+/*...for customizer, make sure the assist goes above .wp-full-overlay, and for WP4.1 it needs to go above sidebar, so do regardless...*/
+.ui-front.cmw-assistance-dialog {z-index:600000;}
 /*...menu...*/
 .widget-custom-menu-wizard-dialog .cmw-demo-themenu {float:left; margin:0 0.5em 0.5em 0;}
 .widget-custom-menu-wizard-dialog .cmw-demo-themenu-ul {font-size:0.8333em; line-height:1.75;}
