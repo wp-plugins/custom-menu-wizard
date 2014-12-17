@@ -3,8 +3,8 @@ Contributors: wizzud
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KP2LVCBXNCEB4
 Tags: menu,widget,navigation,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
-Tested up to: 4.0
-Stable tag: 3.1.2
+Tested up to: 4.1
+Stable tag: 3.1.3
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -24,7 +24,7 @@ Features include:
 * Make the output conditional upon the current menu item being found in different stages of the filter selection process
 * Automatically add cmw-level-N and cmw-has-submenu classes to output menu items
 * Allow the widget title to be entered but not output, or to be set from the current menu item or selected branch item
-* Select hierarchicial or flat output, both options still abiding by the specified number of levels to output
+* Select hierarchical or flat output, both options still abiding by the specified number of levels to output
 * Add/specify custom class(es) for the widget block, the menu container, and the menu itself
 * Modify the link's output with additional HTML around the link's text and/or the link element itself
 * Use Ordered Lists (OL) for the top and/or sub levels instead of Unordered Lists (UL)
@@ -63,6 +63,20 @@ there are probably a couple of very common scenarios:
         * under Secondary Filter, set *Starting at* to "+1 (children)"
     * Save the widget!
     * *Equivalent shortcode resembles `[cmwizard menu=N title="Your Title" branch=current start_at="+1"/]`*
+
+4. Always show the top level items, but when the menu contains the current item then also show that current item, with its ancestors and immediate children...
+    * Drag a new Custom Menu Wizard widget into the sidebar, and give it a title (if you want one)
+    * Select the menu you wish to use (if it's not already selected)
+    * Open the FILTERS section :
+        * under Primary Filter, click on the *Branch* radio
+        * under Secondary Filter, set *Depth* to "2 levels" (ie. current item plus immediate children)
+        * under Inclusions, set *Branch Ancestors* to "to level 1 (root)", and set *Level* to "1"
+    * Open the ALTERNATIVE section :
+        * set *On condition* to "Current Item is NOT in..." and "Menu" (the 2nd dropdown)
+        * in the *Then switch settings to* textarea, type in "[cmwizard depth=1/]" (without the quotes!)
+    * Save the widget!
+    * *Equivalent shortcode resembles `[cmwizard menu=N branch=current depth=2 ancestors=1 include_level="1" alternative="no-current,menu"]depth=1[/cmwizard]`*
+
 
 If you like this widget (or if you don't?), please consider taking a moment or two to give it a 
 [Review](http://wordpress.org/support/view/plugin-reviews/custom-menu-wizard) : it helps others, and gives me valuable feedback.
@@ -774,6 +788,9 @@ Note that output from this shortcode extension is restricted to users with edit_
 
 == Changelog ==
 
+= 3.1.3 =
+* tweak : minor change to css for the assist when running under the Customizer (WordPress 4.1)
+
 = 3.1.2 =
 * modified the readme : documentation for the Shortcode Parameters has been moved to the Installation page (to avoid being truncated)
 
@@ -906,6 +923,9 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.1.3 =
+Tweaked the assist's css for when running the Customizer in WordPress 4.1.
 
 = 3.1.2 =
 No code changes, just moved the readme's Shortcode Parameters documentation onto the Installation page (to avoid being truncated).
