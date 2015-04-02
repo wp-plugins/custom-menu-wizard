@@ -513,6 +513,13 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 					'disableif' => $isNotByBranch
 				) ); ?>
 		</div>
+		<div class="cmw-indented">
+			&hellip; <?php _e('and:'); ?>
+			<?php $this->cmw_formfield_checkbox( $instance, 'title_linked',
+				array(
+					'label' => __('Make it a Link')
+				) ); ?>
+		</div>
 	</div>
 
 	<div>
@@ -839,17 +846,41 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 
 					//title from : priority is current -> current root -> branch -> branch root...
 					//note that none actually have to be present in the results
-					foreach( array('current', 'current_root', 'branch', 'branch_root') as $v){
-						if( $instance[ 'title_from_' . $v ] && !empty( $this->_cmw_walker[ $v . '_title' ] ) ){
-							$title = $this->_cmw_walker[ $v . '_title' ];
-							break;
+					//v3.1.4 : used to get just the title string passed back, now get the menu item element!
+					if( !empty( $this->_cmw_walker['get_title_from'] ) ){
+						foreach( array('current', 'current_root', 'branch', 'branch_root') as $v){
+							if( $instance[ 'title_from_' . $v ] && !empty( $this->_cmw_walker['get_title_from'][ $v ] ) 
+									&& !empty( $this->_cmw_walker['get_title_from'][ $v ]->title ) ){
+								//allow the widget_title filter to override...
+								$title = apply_filters( 'widget_title', $this->_cmw_walker['get_title_from'][ $v ]->title, $instance, $this->id_base );
+								//if we've been asked for a linked title...
+								if( $instance['title_linked'] ){
+									$n = array(
+										'title'  => empty( $this->_cmw_walker['get_title_from'][ $v ]->attr_title ) ? '' : $this->_cmw_walker['get_title_from'][ $v ]->attr_title,
+										'target' => empty( $this->_cmw_walker['get_title_from'][ $v ]->target )     ? '' : $this->_cmw_walker['get_title_from'][ $v ]->target,
+										'rel'    => empty( $this->_cmw_walker['get_title_from'][ $v ]->xfn )        ? '' : $this->_cmw_walker['get_title_from'][ $v ]->xfn,
+										'href'   => empty( $this->_cmw_walker['get_title_from'][ $v ]->url )        ? '' : $this->_cmw_walker['get_title_from'][ $v ]->url,
+										'class'  => 'cmw-linked-widget-title'
+									);
+									$n = apply_filters( 'custom_menu_wizard_title_link_atts', $n, $this->_cmw_walker['get_title_from'][ $v ], $instance, $this->id_base );
+									$atts = '';
+									foreach ( (array)$n as $i => $j ) {
+										if ( !empty( $j ) ) {
+											$j = ( $i === 'href' ) ? esc_url( $j ) : esc_attr( $j );
+											$atts .= ' ' . $i . '="' . $j . '"';
+										}
+									}
+									if( !empty( $atts ) ){
+										$title = '<a' . $atts . '>' . $title . '</a>';
+									}
+								}
+								break;
+							}
 						}
 					}
 					if( empty( $title ) ){
-						$title = $instance['hide_title'] ? '' : $instance['title'];
+						$title = $instance['hide_title'] ? '' : apply_filters( 'widget_title', $instance['title'], $instance, $this->id_base );
 					}
-					//allow the widget_title filter to override anything we've set up...
-					$title = apply_filters('widget_title', $title, $instance, $this->id_base);
 
 					//remove/replace the cmw-fellback-maybe class...
 					$out = str_replace(
@@ -1298,6 +1329,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 				'title_from_branch_root'            => 0, //v3.0.0 added
 				'title_from_current'                => 0,
 				'title_from_current_root'           => 0, //v3.0.0 added
+				'title_linked'                      => 0, //v3.1.4 added
 				'ol_root'                           => 0,
 				'ol_sub'                            => 0,
 				'hide_empty'                        => 0, //this only has relevance prior to WP v3.6
@@ -1431,6 +1463,7 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 	 * returns the shortcode equivalent of the current settings (not called by legacy code!)
 	 * 
 	 * @param array $instance
+	 * @param boolean $asJSON Requests response in JSON format, for the data-cmws attribute
 	 * @return string
 	 */
 	public function cmw_shortcode( $instance, $asJSON=false ){
@@ -1532,6 +1565,10 @@ class Custom_Menu_Wizard_Widget extends WP_Widget {
 		}
 		if( !empty( $n ) ){
 			$args['title_from'] = $n;
+			//...title_linked is only relevant if title_from is set...
+			if( $instance['title_linked'] ){
+				$args['title_linked'] = 1;
+			}
 		}
 		//switches...
 		foreach( array('siblings', 'flat_output', 'ol_root', 'ol_sub', 'fallback_ci_parent') as $n ){

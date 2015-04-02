@@ -3,13 +3,18 @@
  * Plugin Name: Custom Menu Wizard
  * Plugin URI: http://wordpress.org/plugins/custom-menu-wizard/
  * Description: Show any part of a custom menu in a Widget, or in content using a Shortcode. Customise the output with extra classes or html; filter by current menu item or a specific item; set a depth, show the parent(s), change the list style, etc. Use the included emulator to assist with the filter settings.
- * Version: 3.1.3
+ * Version: 3.1.4
  * Author: Roger Barrett
  * Author URI: http://www.wizzud.com/
  * License: GPL2+
 */
 defined( 'ABSPATH' ) or exit();
 /*
+ * v3.1.4 change log
+ * - fixed bug : in the shortcode format, the Alternative wasn't actually being used (always ran the default)! thanks corrideat
+ * - fixed bug : prevent texturization of the shortcode's content (the Alternative, when supplied)
+ * - added the ability to make the title a link if it is set from a menu item (using Set Title from)
+ * 
  * v3.1.3 change log
  * - tweak : css tweak for the assist when in customizer, for WordPress 4.1
  * 
@@ -150,7 +155,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 	//declare the main plugin class...
 	class Custom_Menu_Wizard_Plugin {
 		
-		public static $version = '3.1.3';
+		public static $version = '3.1.4';
 		public static $script_handle = 'custom-menu-wizard-plugin-script';
 		public static $widget_class = 'Custom_Menu_Wizard_Widget';
 		protected static $instance;
@@ -170,6 +175,8 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 			add_action( 'customize_controls_enqueue_scripts', array( &$this, 'enqueue_styles' ) );
 			add_action( 'customize_controls_enqueue_scripts', array( &$this, 'enqueue_scripts' ) );
 
+			//add filter to prevent texturisation of cmwizard shortcode (screws up alternatives!)...
+			add_filter( 'no_texturize_shortcodes', array( &$this, 'no_texturize_shortcode' ) );
 			//add filter for encoding a cmwizard shortcode into instance settings...
 			add_filter( 'custom_menu_wizard_encode_shortcode', array( $this, 'encode_shortcode' ), 10, 1 );
 			//add filter for sanitizing an alternative shortcode setting... 
@@ -450,6 +457,16 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 
 		} //end sanitize_alternative()
 
+		/**
+		 * hooked into no_texturize_shortcodes filter : prevents texturisation of cmwizard shortcode
+		 * 
+		 * @param array $arr Array of shortcodes
+		 * @return array
+		 */
+		public function no_texturize_shortcode( $arr = false ){
+			return empty( $arr ) ? array('cmwizard') : array_merge( (array)$arr, array('cmwizard') );
+		}
+
 		/** 
 		 * shortcode processing for [cmwizard option="" option="" ...] (as of v3.0.0)
 		 * 
@@ -620,6 +637,7 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 				'flat_output'         => 0,
 				//determines title_from_[branch|current|branch-root|current-root]...
 				'title_from'          => '', // csv of branch|current|branch-root|current-root
+				'title_linked'        => 0, //v3.1.4
 				'ol_root'             => 0,
 				'ol_sub'              => 0,
 				//strings...
@@ -801,7 +819,8 @@ if( !class_exists( 'Custom_Menu_Wizard_Plugin' ) ){
 						}
 					}
 					if( !empty( $instance['switch_if'] ) && !empty( $instance['switch_at'] ) ){
-						$instance['switch_to'] = apply_filters( 'custom_menu_wizard_sanitize_alternative', $instance['switch_to'] );
+						//v3.1.4 : fixed bug where $content - the alternative shortcode - wasn't being passed into the filter...
+						$instance['switch_to'] = apply_filters( 'custom_menu_wizard_sanitize_alternative', $content );
 					}else{
 						$instance['switch_if'] = $instance['switch_at'] = $instance['switch_to'] = '';
 					}

@@ -106,6 +106,7 @@ jQuery(function($){
 							'fallback'          : '',
 							'flat_output'       : 0,
 							'title_from'        : '',
+							'title_linked'      : 0,
 							'ol_root'           : 0,
 							'ol_sub'            : 0
 						},
@@ -363,6 +364,7 @@ jQuery(function($){
 						items = topOfMenu.find('.picked'),
 						html = '',
 						title = settings.hide_title ? '' : settings.title,
+						titleLinked = 0,
 						currLevel = 0,
 						output = dialog.find('.cmw-demo-theoutput-wrap').empty(),
 						listClass = ['menu-widget'],
@@ -370,6 +372,7 @@ jQuery(function($){
 				if(items.length && output.length){
 					//determine title: update() might have set a class for it...
 					title = topOfMenu.find('.title-from-item').children('.cmw-item').text() || '';
+					titleLinked = !!title && !!settings.title_linked;
 					//...otherwise, check the actual widget title...
 					if(!title && !settings.hide_title){
 						title = settings.title || '';
@@ -417,7 +420,7 @@ jQuery(function($){
 					}).addClass('cmw-has-submenu');
 				}
 				if(output.length && title && (items.length || !settings.hide_empty)){
-					output.prepend('<h3>' + title + '</h3>');
+					output.prepend((titleLinked ? '<h3 class="cmw-title-linked">' : '<h3>') + title + '</h3>');
 				}
 			}, //end showOutput()
 	/**
@@ -1091,6 +1094,10 @@ jQuery(function($){
 			}
 			if(n.length){
 				args.title_from = n;
+				//...title_linked is only relevant if title_from is set...
+				if(settings.title_linked){
+					args.title_linked = 1;
+				}
 			}
 			//switches...
 			for(n in {siblings:1, flat_output:1, ol_root:1, ol_sub:1, fallback_ci_parent:1}){

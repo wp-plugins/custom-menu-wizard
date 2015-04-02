@@ -848,26 +848,28 @@ class Custom_Menu_Wizard_Walker extends Walker_Nav_Menu {
 
 			//check for title_from...
 			if( $continue ){
+				//v3.1.4 : this used to pass back just the title; it now passes back the element object!
+				$cmw['_walker']['get_title_from'] = array();
 				//might we want the (original) branch item's, or root item's, title as the widget title?...
 				if( $find_branch && $theBranchItem > 0 ){
-					$cmw['_walker']['branch_title'] = $elements[ $this->_cmw_tree[ $theBranchItem ]['element'][0] ]->title;
+					$cmw['_walker']['get_title_from']['branch'] = $elements[ $this->_cmw_tree[ $theBranchItem ]['element'][0] ];
 					if( $this->_cmw_tree[ $theBranchItem ]['level'] > 1 ){
 						$topOfBranch = array_slice( $this->_cmw_tree[ $theBranchItem ]['ancestors'], 1, 1 );
 						$topOfBranch = $topOfBranch[0];
-						$cmw['_walker']['branch_root_title'] = $elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ]->title;
+						$cmw['_walker']['get_title_from']['branch_root'] = $elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ];
 					}else{
-						$cmw['_walker']['branch_root_title'] = $cmw['_walker']['branch_title'];
+						$cmw['_walker']['get_title_from']['branch_root'] = $cmw['_walker']['get_title_from']['branch'];
 					}
 				}
 				//might we want the current item's, or root item's, title as the widget title?...
 				if( $currentItem !== false ){
-					$cmw['_walker']['current_title'] = $elements[ $this->_cmw_tree[ $currentItem ]['element'][0] ]->title;
+					$cmw['_walker']['get_title_from']['current'] = $elements[ $this->_cmw_tree[ $currentItem ]['element'][0] ];
 					if( $this->_cmw_tree[ $currentItem ]['level'] > 1 ){
 						$topOfBranch = array_slice( $this->_cmw_tree[ $currentItem ]['ancestors'], 1, 1 );
 						$topOfBranch = $topOfBranch[0];
-						$cmw['_walker']['current_root_title'] = $elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ]->title;
+						$cmw['_walker']['get_title_from']['current_root'] = $elements[ $this->_cmw_tree[ $topOfBranch ]['element'][0] ];
 					}else{
-						$cmw['_walker']['current_root_title'] = $cmw['_walker']['current_title'];
+						$cmw['_walker']['get_title_from']['current_root'] = $cmw['_walker']['get_title_from']['current'];
 					}
 				}
 			}
