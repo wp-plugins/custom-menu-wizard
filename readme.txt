@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: menu,widget,navigation,custom menu,partial menu,current item,current page,menu level,menu branch,menu shortcode,menu widget,advanced,enhanced
 Requires at least: 3.6
 Tested up to: 4.1
-Stable tag: 3.1.3
+Stable tag: 3.1.4
 License: GPLv2 or Later
 
 Show branches or levels of your menu in a widget, or in content using a shortcode, with full customisation.
@@ -336,6 +336,11 @@ as the Current Item.
     * **Branch** : only applicable to a `Branch` filter, and sets `Title` from the `Branch` item.
     * **...or its Root** : only applicable to a `Branch` filter, and sets `Title` from the branch's root menu item.
 
+* **Make it a Link** *checkbox*
+
+    If the widget `Title` does actually get set using one of the `Set Title from` options, then this will put an anchor around the
+    title, using the information from the menu item that supplies the title.
+
 * **Change UL to OL** *checkboxes*
 
     The standard for menus is to use UL (unordered list) elements to display the output. These settings give you the option to 
@@ -491,7 +496,7 @@ a "+" or "-") integer, eg. `start_at="+1"`, while an absolute level is unsigned,
 
 = start_mode =
 *string* : This has only one accepted value - "level" - and is only applicable for a `Branch` filter whose **start_at** setting returns
-in an item is at or above the selected branch item (relatively or absolutely). 
+in an item that is at or above the selected branch item (relatively or absolutely). 
 Setting `start_mode="level"` forces the widget to use not only the resultant starting item 
 and its relevant descendants, but also all that item's siblings *and their descendants* 
 (ref. the widget's `Level` radio option under *Secondary Filter*, 
@@ -571,6 +576,9 @@ same as "current,1,+siblings", and "2,parent" is the same as "parent,2", etc.
 * *"current-root"* : enables the widget's *...or its Root* option that relates to the `Current Item` `Set Title from` option
 * *"branch"* : enables the widget's *Branch* `Set Title from` option
 * *"branch-root"* : enables the widget's *...or its Root* option that relates to the `Branch` `Set Title from` option
+
+= title_linked =
+*switch, off by default, 1 to enable* : Makes the title into a link if the title comes from one of the `title_from` options.
 
 = ol_root =
 *switch, off by default, 1 to enable* : See widget's `Top Level` option, under *Change UL to OL* in the [Output Section](http://wordpress.org/plugins/custom-menu-wizard/other_notes/#Output-Section).
@@ -680,7 +688,7 @@ Example : `[cmwizard findme=1 title="Posts containing a CMW shortcode..."/]`
 * Show the entire "main" menu entitled "Main Menu" *unless* there's a current menu item, in which case show the current menu item, its siblings and its immediate children, and entitle it "Nearest and Dearest!"
 
     `
-    [cmwizard menu=main title="Main Menu"]title="Nearest and Dearest!" branch=current depth=2 siblings=1[/cmwizard]
+    [cmwizard menu=main title="Main Menu" alternative="current,menu"]title="Nearest and Dearest!" branch=current depth=2 siblings=1[/cmwizard]
     `
 
 == Frequently Asked Questions ==
@@ -787,6 +795,11 @@ Note that output from this shortcode extension is restricted to users with edit_
 9. Widget's "assist"
 
 == Changelog ==
+
+= 3.1.4 =
+* bugfix : in shortcode processing, any supplied Alternative settings weren't being used. thanks corrideat
+* bugfix : prevent texturization of shortcode's content, for when it is being used with an Alternative setting
+* addition : the ability to make a title into a link when the title has been set from a menu item
 
 = 3.1.3 =
 * tweak : minor change to css for the assist when running under the Customizer (WordPress 4.1)
@@ -923,6 +936,10 @@ Note that output from this shortcode extension is restricted to users with edit_
 * Initial release
 
 == Upgrade Notice ==
+
+= 3.1.4 =
+Fixed a couple of bugs in the shortcode processing, for when an Alternative is being used.
+Added the ability to make a title into a link when the title has been set from a menu item.
 
 = 3.1.3 =
 Tweaked the assist's css for when running the Customizer in WordPress 4.1.
